@@ -6,7 +6,7 @@ from PyQt5.QtCore import (QAbstractItemModel, QModelIndex, Qt)
 class TreeItem(object):
     def __init__(self, data, parent=None):
         '''
-        :param data: column contents of tree item, e.g. [name, description]
+           :param data: column contents of tree item, e.g. [name, description]
         '''        
         self.itemData = data
         self.parentItem = parent
@@ -42,9 +42,9 @@ class TreeItem(object):
 class TreeModel(QAbstractItemModel):
     def __init__(self, rootItem, parent=None):        
         '''init model with a root item only, model data could be setup
-        explictly later by setup(data, parent)
-        :param rootItem: root node, header of tree by default
-        :param parent: parent object
+           explictly later by setup(data, parent)
+           :param rootItem: root node, header of tree by default
+           :param parent: parent object
         '''
         super(TreeModel, self).__init__(parent)
         self.rootItem = rootItem

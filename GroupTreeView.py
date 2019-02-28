@@ -1,3 +1,7 @@
+# editable tree view for groups:
+# append, insert child, remove, edit text
+# 
+
 from PyQt5.QtCore import QItemSelectionModel, QModelIndex, Qt
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu, QAction
 
@@ -5,8 +9,7 @@ from Model.GroupModel import GroupModel
 
 class GroupTreeView(QTreeView):
     def __init__(self, header, parent=None):
-        '''
-        :param headers: header of tree, e.g. ('name', 'value')
+        ''':param headers: header of tree, e.g. ('name', 'value')
         '''
         super(GroupTreeView, self).__init__(parent)
 

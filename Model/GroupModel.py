@@ -1,3 +1,6 @@
+# model for group tree view
+# an editable tree based on simple TreeModel
+
 from PyQt5.QtCore import QModelIndex, Qt
 
 from .TreeModel import TreeItem, TreeModel
@@ -63,14 +66,14 @@ class GroupItem(TreeItem):
         '''store data'''
         res = {'key': self._key, 'name': self.itemData[0]}
         if self.childItems:
-            res['children'] = [child.serialize() for child in self.childItems if not 0<child.key()<10]
+            res['children'] = [child.serialize() for child in self.childItems]
         return res
 
 class GroupModel(TreeModel):
     def __init__(self, header, parent=None):
         '''
-        :param headers: header of tree, e.g. ('name', 'value')
-        :param parent: parent object
+           :param headers: header of tree, e.g. ('name', 'value')
+           :param parent: parent object
         '''         
         # init model with root item only
         rootItem = GroupItem(0, header) # root item
@@ -81,9 +84,9 @@ class GroupModel(TreeModel):
 
     def setup(self, items=[], parent=None):
         '''setup model data for generating the tree
-        :param items: list raw data for child items of parent, e.g.
+           :param items: list raw data for child items of parent, e.g.
                         [{'key':.., 'name':.., 'children':[]}, {}, ...]
-        :param parent: parent item
+           :param parent: parent item
         '''
         if not parent:
             parent = self.rootItem
