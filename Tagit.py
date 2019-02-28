@@ -21,7 +21,12 @@ class MainWindow(QMainWindow):
 
         # group widget
         config = {'key': 0, 'name': 'Group', 'children': [{'key': 18, 'name': '[New Group]', 'children': [{'key': 19, 'name': '[Sub Group]'}]}, {'key': 12, 'name': '[New Group]', 'children': [{'key': 13, 'name': '[Sub Group]', 'children': [{'key': 14, 'name': '[Sub Group]', 'children': [{'key': 15, 'name': '[Sub Group]'}]}, {'key': 16, 'name': '[New Group]'}]}]}]}
-        self.groupTreeView = GroupTreeView(config)
+        default_groups = [
+            {'key':1, 'name':'Imported'},
+            {'key':2, 'name':'All Groups'},
+            ]
+        self.groupTreeView = GroupTreeView(['GROUP'])
+        self.groupTreeView.setup(default_groups)
         dock_1 = self.createDockWindows('Groups', self.groupTreeView)
 
         # tab widget:to do

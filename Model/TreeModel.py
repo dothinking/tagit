@@ -40,20 +40,23 @@ class TreeItem(object):
 
 
 class TreeModel(QAbstractItemModel):
-    def __init__(self, rootItem, data, parent=None):
-        '''
+    def __init__(self, rootItem, parent=None):        
+        '''init model with a root item only, model data could be setup
+        explictly later by setup(data, parent)
         :param rootItem: root node, header of tree by default
-        :param data: data for initializing tree
         :param parent: parent object
         '''
         super(TreeModel, self).__init__(parent)
-
         self.rootItem = rootItem
-        self._setupModelData(data, rootItem)
 
-    def _setupModelData(self, lines, parent):
+
+    def setup(self, data, parent):
         '''user defined method to setup model data,
-           which are used to generate the tree
+           which are used to generate the tree.
+           if it would be used to reset the tree model after
+           the tree view was created, make sure the reset process
+           is implemented between beginResetModel() and
+           endResetModel()
         '''
         raise NotImplementedError
 

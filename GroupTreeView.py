@@ -4,28 +4,40 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu, QAction
 from Model.GroupModel import GroupModel
 
 class GroupTreeView(QTreeView):
-    def __init__(self, config={}, parent=None):
+    def __init__(self, header, parent=None):
         '''
-        :param config: raw data for category tree
+        :param headers: header of tree, e.g. ('name', 'value')
         '''
         super(GroupTreeView, self).__init__(parent)
 
-        # init tree        
-        model = GroupModel(config)
-        self.setModel(model)
+        # init tree
         self.resizeColumnToContents(0)
         self.setAlternatingRowColors(True)
-        self.header().hide()     
+        self.header().hide()
+        self.expandAll()
+
+        # model
+        model = GroupModel(header)
+        self.setModel(model)
 
         # context menu
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
+
         self.menu_map = [
             ("Create Group", self.slot_insertRow),
             ("Create Sub-Group", self.slot_insertChild),
             (None, None), # separator
             ("Remove Group", self.slot_removeRow)
         ]
+
+    def setup(self, data=[]):
+        '''reset tree with specified model data'''
+        self.model().setup(data)       
+
+        # refresh tree view to activate the model setting
+        self.reset()
+        self.expandAll()
 
     def customContextMenu(self, position):
         '''show context menu'''
@@ -36,11 +48,12 @@ class GroupTreeView(QTreeView):
         # init context menu
         menu = QMenu()
         actions = []
-        for name, slot in self.menu_map:
-            if name:
-                actions.append(menu.addAction(self.tr(name), slot))
-            else:
+        for menu_item in self.menu_map:
+            if not menu_item or not menu_item[0]:
                 menu.addSeparator()
+            else:
+                name, slot = menu_item
+                actions.append(menu.addAction(self.tr(name), slot))                
 
         # set status
         model = self.model()
@@ -96,6 +109,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     config = {'key': 0, 'name': 'Group', 'children': [{'key': 18, 'name': '[New Group]', 'children': [{'key': 19, 'name': '[Sub Group]'}]}, {'key': 12, 'name': '[New Group]', 'children': [{'key': 13, 'name': '[Sub Group]', 'children': [{'key': 14, 'name': '[Sub Group]', 'children': [{'key': 15, 'name': '[Sub Group]'}]}, {'key': 16, 'name': '[New Group]'}]}]}]}
-    widget = CategoryWidget(config)
-    widget.show()
+    tree = GroupTreeView(['GROUP'])
+    tree.setup(config.get('children', []))
+    tree.show()
     sys.exit(app.exec_())   

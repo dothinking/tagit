@@ -55,37 +55,43 @@ class GroupItem(TreeItem):
             self.itemData[column] = value
             return True
 
-    def save(self):
+    def reset(self):
+        '''remove all child items'''
+        self.childItems = []
+
+    def serialize(self):
         '''store data'''
         res = {'key': self._key, 'name': self.itemData[0]}
         if self.childItems:
-            res['children'] = [child.save() for child in self.childItems if not 0<child.key()<10]
+            res['children'] = [child.serialize() for child in self.childItems if not 0<child.key()<10]
         return res
 
 class GroupModel(TreeModel):
-    def __init__(self, data={}, parent=None):
+    def __init__(self, header, parent=None):
         '''
         :param headers: header of tree, e.g. ('name', 'value')
-        :param data: data for initializing tree {'key':..,'name':..,'children':[]}
         :param parent: parent object
-        ''' 
-        self.currentKey = 9
-        # setup items
-        rootItem = GroupItem(0, [None]) # root item
-        config = data.get('children', [])
-        super(GroupModel, self).__init__(rootItem, config, parent)
+        '''         
+        # init model with root item only
+        rootItem = GroupItem(0, header) # root item
+        super(GroupModel, self).__init__(rootItem, parent)
 
-        # default items
-        root_name = data.get('name', self.tr('Groups'))
-        default_names = [self.tr('All Groups'), self.tr('Imported')]
-        self._initializeDefault(root_name, default_names)
+        self.currentKey = 9
     
 
-    def _setupModelData(self, items, parent):
+    def setup(self, items=[], parent=None):
         '''setup model data for generating the tree
-        :param items: list raw data for child items of parent
+        :param items: list raw data for child items of parent, e.g.
+                        [{'key':.., 'name':.., 'children':[]}, {}, ...]
         :param parent: parent item
         '''
+        if not parent:
+            parent = self.rootItem
+
+        # reset data within beginResetModel() and endResetModel(),
+        # so that these model data could be updated explicitly
+        self.beginResetModel()
+        parent.reset()
         for item in items:
             # append item
             key = item.get('key')            
@@ -95,16 +101,11 @@ class GroupModel(TreeModel):
             # set name
             currentItem = parent.child(parent.childCount() -1)
             currentItem.setData(0, item.get('name'))
-            # setup child items
-            self._setupModelData(item.get('children', []), currentItem) 
 
-    def _initializeDefault(self, root_name, default_names):
-        # Name for root item
-        self.rootItem.setData(0, root_name)
-        # default items        
-        for key, name in enumerate(default_names, start=1):
-            self.rootItem.insertChildren(0, key, 1, 1)
-            self.rootItem.child(0).setData(0, name)
+            # setup child items
+            self.setup(item.get('children', []), currentItem)
+        self.endResetModel()
+
 
     def _nextKey(self):
         '''next key for new item of this model'''
@@ -179,9 +180,9 @@ class GroupModel(TreeModel):
 
         return result
 
-    def save(self):
+    def serialize(self):
         '''store raw data'''
-        return self.rootItem.save()
+        return self.rootItem.serialize()
 
 if __name__ == '__main__':
 
