@@ -27,13 +27,6 @@ class GroupTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
 
-        self.menu_map = [
-            ("Create Group", self.slot_insertRow),
-            ("Create Sub-Group", self.slot_insertChild),
-            (None, None), # separator
-            ("Remove Group", self.slot_removeRow)
-        ]
-
     def setup(self, data=[]):
         '''reset tree with specified model data'''
         self.model().setup(data)       
@@ -50,19 +43,16 @@ class GroupTreeView(QTreeView):
 
         # init context menu
         menu = QMenu()
-        actions = []
-        for menu_item in self.menu_map:
-            if not menu_item or not menu_item[0]:
-                menu.addSeparator()
-            else:
-                name, slot = menu_item
-                actions.append(menu.addAction(self.tr(name), slot))                
+        menu.addAction(self.tr("Create Group"), self.slot_insertRow)
+        act_sb = menu.addAction(self.tr("Create Sub-Group"), self.slot_insertChild)
+        menu.addSeparator()
+        act_rv = menu.addAction(self.tr("Remove Group"), self.slot_removeRow)
 
         # set status
         model = self.model()
         s = not model.isDefaultItem(indexes[0])
-        actions[1].setEnabled(s)
-        actions[2].setEnabled(s)
+        act_sb.setEnabled(s)
+        act_rv.setEnabled(s)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 

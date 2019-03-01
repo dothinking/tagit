@@ -35,10 +35,9 @@ class MainWindow(QMainWindow):
         self.createStatusBar()
 
         # window
-        title = self._database if self._database else 'untitled project.dat'
-        self.setWindowTitle("Tagit - {0}".format(title))
+        self.setTitle()
         self.resize(1000,800)
-        self.showMaximized()
+        # self.showMaximized()
 
     # --------------- properties ---------------
     def groupsView(self):
@@ -59,6 +58,8 @@ class MainWindow(QMainWindow):
             {'key':2, 'name':'All Groups'},
         ]
         self.groupTreeView.setup(default_groups)
+
+        self.setTitle()
 
     def loadDatabase(self, filename=None):
         '''load data from specified file,
@@ -89,6 +90,7 @@ class MainWindow(QMainWindow):
 
         # set current database
         self._database = filename
+        self.setTitle()
 
         return True
 
@@ -107,6 +109,7 @@ class MainWindow(QMainWindow):
             QSettings('dothinking', 'tagit').setValue('database', filename)
             # set current database
             self._database = filename
+            self.setTitle()
 
     # --------------- user interface ---------------
     def setupViews(self):
@@ -130,38 +133,18 @@ class MainWindow(QMainWindow):
 
     def createMainMenu(self):
         '''main menu'''
-        main_menu = MainMenu(self)
-        # menu: (text, [sub actions])
-        # action: (text, slot, shortcut, icon, tips)
-        # separator: ()
-        menus = [
-            ('&File',[
-                ('&New', self.reset, QKeySequence.New, None, 'Create new Tagit project'),
-                ('&Open ...', lambda:main_menu.open(), QKeySequence.Open, None, 'Open existing project'),
-                ('&Save', lambda:main_menu.save(), QKeySequence.Save, None, 'Save current project'),
-                ('Save as ...', lambda:main_menu.saveAs(), None, 'Save as new a project'),
-                (),
-                ('E&xit', self.close, 'Ctrl+Q'),
-            ]),
-            ('&Edit',[
-                ('New Group',self.groupTreeView.slot_insertRow,'Ctrl+G',None,None),
-                ('New Sub-Group',self.groupTreeView.slot_insertChild,None,None,None),                
-                ('Remove Group',self.groupTreeView.slot_removeRow,None,None,'Delete currently selected group'),
-                (),
-                ('New Tag',None,'Ctrl+T',None,None),
-                ('Remove Tag',None,None,None,'Delete currently selected tag'),
-            ]),
-            ('&View', []),
-            ('&Help',[
-                ('About',None,None,None,None),
-                ('Test', [
-                    ('Test1',None,None,None,'hiaha, test1'),
-                    ('Test2',None,None,None,'hiaha, test2'),
-                ])
-            ])
-        ]
-        
-        main_menu.createMenus(self.menuBar(), menus)
+        self.main_menu = MainMenu(self)        
+        # create menu items
+        self.main_menu.createMenus()
+        # set menu enable status 
+        self.main_menu.refreshMenus()
+        # toolbar
+        self.main_menu.createToolBars()
+
+    def setTitle(self):
+        '''set window title'''
+        title = self._database if self._database else 'untitled.dat'
+        self.setWindowTitle("Tagit - {0}".format(title))
 
     def createStatusBar(self):
         if self._database:
