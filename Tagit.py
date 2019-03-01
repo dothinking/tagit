@@ -1,7 +1,8 @@
 from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtGui import (QIcon, QKeySequence)
-from PyQt5.QtWidgets import (QAction, QApplication, QWidget, QDockWidget,
-        QFileDialog, QMainWindow, QMessageBox, QTextEdit)
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QTabWidget, QAction, 
+    QFileDialog, QMainWindow, QMessageBox, QTextEdit, QSplitter)
 
 import os
 import pickle
@@ -18,14 +19,10 @@ class MainWindow(QMainWindow):
     key_tag = 'tags'
 
     def __init__(self):
-        super(MainWindow, self).__init__()        
+        super(MainWindow, self).__init__()
 
-        # main area
-        self.textEdit = QTextEdit()
-        self.setCentralWidget(self.textEdit)
-
-        # left widgets: groups and tags
-        self.createLeftWidgets()
+        # whole views
+        self.setupViews()
 
         # menu and toolbox
         self.createMainMenu()
@@ -112,18 +109,24 @@ class MainWindow(QMainWindow):
             self._database = filename
 
     # --------------- user interface ---------------
-    def createLeftWidgets(self):
-        '''init groups and tags widgets'''
-        # group widget        
-        self.groupTreeView = GroupTreeView(['GROUP'])        
-        dock_1 = self.createDockWindows('Groups', self.groupTreeView)
+    def setupViews(self):
+        '''create main views'''
+        # separate widgets        
+        self.groupTreeView = GroupTreeView(['GROUP']) # groups tree view        
+        self.tagsView = QWidget() # tags table widget: to do        
+        self.textEdit = QTextEdit() # main table widget: to do
 
-        # tab widget:to do
-        self.tagsView = QWidget()
-        dock_2 = self.createDockWindows('Tags', self.tagsView)
+        # arranged views
+        self.tabWidget = QTabWidget()
+        self.tabWidget.addTab(self.groupTreeView, "Groups")
+        self.tabWidget.addTab(self.tagsView, "Tags")
 
-        self.tabifyDockWidget(dock_1, dock_2)
-        dock_1.raise_()
+        splitter = QSplitter()        
+        splitter.addWidget(self.tabWidget)
+        splitter.addWidget(self.textEdit)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        self.setCentralWidget(splitter)
 
     def createMainMenu(self):
         '''main menu'''
@@ -133,18 +136,20 @@ class MainWindow(QMainWindow):
         # separator: ()
         menus = [
             ('&File',[
-                ('&New Project', self.reset, QKeySequence.New),
-                ('&Open Project', lambda:main_menu.open(), QKeySequence.Open),
-                ('&Save', lambda:main_menu.save(), QKeySequence.Save),
-                ('Save as',lambda:main_menu.saveAs()),
+                ('&New', self.reset, QKeySequence.New, None, 'Create new Tagit project'),
+                ('&Open ...', lambda:main_menu.open(), QKeySequence.Open, None, 'Open existing project'),
+                ('&Save', lambda:main_menu.save(), QKeySequence.Save, None, 'Save current project'),
+                ('Save as ...', lambda:main_menu.saveAs(), None, 'Save as new a project'),
                 (),
                 ('E&xit', self.close, 'Ctrl+Q'),
             ]),
-            ('&Group',[
-                ('New Group',self.groupTreeView.slot_insertRow,None,None,None),
-                ('Create Sub-Group',self.groupTreeView.slot_insertChild,None,None,None),
+            ('&Edit',[
+                ('New Group',self.groupTreeView.slot_insertRow,'Ctrl+G',None,None),
+                ('New Sub-Group',self.groupTreeView.slot_insertChild,None,None,None),                
+                ('Remove Group',self.groupTreeView.slot_removeRow,None,None,'Delete currently selected group'),
                 (),
-                ('Remove Group',self.groupTreeView.slot_removeRow,None,None,None),
+                ('New Tag',None,'Ctrl+T',None,None),
+                ('Remove Tag',None,None,None,'Delete currently selected tag'),
             ]),
             ('&View', []),
             ('&Help',[
@@ -165,13 +170,6 @@ class MainWindow(QMainWindow):
             msg = 'New database'
         self.statusBar().showMessage(msg)
 
-    def createDockWindows(self, text, widget):
-        dock = QDockWidget(text, self)
-        dock.setAllowedAreas(Qt.LeftDockWidgetArea)                
-        dock.setWidget(widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
-        # self.viewMenu.addAction(dock.toggleViewAction())
-        return dock
 
 if __name__ == '__main__':
 
