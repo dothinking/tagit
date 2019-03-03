@@ -126,7 +126,7 @@ class MainMenu(object):
 
     def new(self):
         if self.maybeSave():
-            self.mainWindow.reset()
+            self.mainWindow.initData()
             self.refreshMenus()
 
     def open(self):
@@ -138,10 +138,10 @@ class MainMenu(object):
             if not filename:
                 return
 
-            if self.mainWindow.loadDatabase(filename):
-                self.refreshMenus()
-            else:
+            if not self.mainWindow.initData(filename):
                 QMessageBox.critical(None, "Error", "Invalid database for Tagit project.")
+
+            self.refreshMenus()
 
     def save(self):
         '''save current database'''

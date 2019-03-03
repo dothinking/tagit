@@ -18,6 +18,20 @@ class MainWindow(QMainWindow):
     key_group = 'groups'
     key_tag = 'tags'
 
+    class Settings(object):
+        def __init__(self):
+            self.setting = QSettings('dothinking', 'tagit')
+
+        def get(self, key, default=None):
+            return self.setting.value(key, default)
+
+        def set(self, key, value=None):
+            if isinstance(key, str):
+                self.setting.setValue(key, value)
+            elif isinstance(key, dict):
+                for k, v in key:
+                    self.setting.setValue(k, v)
+
     def __init__(self):
         super(MainWindow, self).__init__()
 
@@ -28,8 +42,9 @@ class MainWindow(QMainWindow):
         self.createMainMenu()
 
         # init data: last saved database
-        self.reset()
-        self.loadDatabase()
+        self.setting = self.Settings()
+        filename = self.setting.get('database')
+        self.initData(filename)
 
         # status bar
         self.createStatusBar()
@@ -39,7 +54,9 @@ class MainWindow(QMainWindow):
         self.resize(1000,800)
         # self.showMaximized()
 
+    # ----------------------------------------------
     # --------------- properties ---------------
+    # ----------------------------------------------
     def groupsView(self):
         return self.groupTreeView
 
@@ -49,50 +66,60 @@ class MainWindow(QMainWindow):
     def database(self):
         return self._database 
 
-    # --------------- data operation --------------- 
-    def reset(self):
-        '''clear data'''
+    # ----------------------------------------------
+    # --------------- data operation ---------------
+    # ----------------------------------------------
+    def initData(self, database=None):
+        '''load data from specified database, init default if failed.
+           two failing situations:
+           - database is not specified -> init by default and return true
+           - specified but is invalid  -> init by default but return false
+        '''
+        ok = True
+        if database and os.path.exists(database):
+            # load database
+            try:
+                with open(database, 'rb') as f:
+                    data = pickle.load(f)
+            except Exception as e:
+                ok = False
+            else:
+                if self.app_name in data: # valid database
+                    self._database = database
+                    self._initFromDatabase(data)
+                    return ok
+                else:
+                    ok = False
+
+        # init by default if load data from database failed
         self._database = None
+        self._initByDefault()
+
+        return ok
+
+    def _initByDefault(self):
+        '''init default data'''
+        # set window title      
+        self.setTitle()
+        self.groupTreeView.setFocus()
+
+        # init groups tree view
         default_groups = [
             {'key':1, 'name':'Imported'},
             {'key':2, 'name':'All Groups'},
         ]
-        self.groupTreeView.setup(default_groups)
-
+        self.groupTreeView.setup(default_groups, 2)      
+        
+    def _initFromDatabase(self, data):
+        '''load data from database'''
+        # set window title      
         self.setTitle()
+        self.groupTreeView.setFocus()
 
-    def loadDatabase(self, filename=None):
-        '''load data from specified file,
-           or the latest saved database
-        '''
-        # try to get database from local setting
-        if not filename:
-            setting = QSettings('dothinking', 'tagit')
-            filename = setting.value('database', None)
-
-        if not filename or not os.path.exists(filename):
-            return False
-
-        # load database
-        try:
-            with open(str(filename), 'rb') as f:
-                data = pickle.load(f)
-        except Exception as e:
-            return False
-
-        # check
-        if not self.app_name in data:
-            return False
-
-        # init groups
+        # init groups tree view
         groups = data.get(self.key_group, {}).get('children', [])
-        self.groupTreeView.setup(groups)
-
-        # set current database
-        self._database = filename
-        self.setTitle()
-
-        return True
+        key = self.setting.get('selected_group', 2)
+        self.groupTreeView.setup(groups, key)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -117,15 +144,28 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(None, "Error", "Could not save current project to\n {0}.".format(filename))
         else:
-            QSettings('dothinking', 'tagit').setValue('database', filename)
-            # set current database
             self._database = filename
+            self._writeSettings()
             self.setTitle()
             return True
 
         return False
 
+    def _writeSettings(self):
+        '''config data written in QSetting'''
+        # current database
+        self.setting.set('database', self._database)
+
+        # current group
+        if self.groupTreeView.selectedIndexes():
+            index = self.groupTreeView.selectionModel().currentIndex()
+            key = index.internalPointer().key()
+            self.setting.set('selected_group', key)
+
+
+    # ----------------------------------------------
     # --------------- user interface ---------------
+    # ----------------------------------------------
     def setupViews(self):
         '''create main views'''
         # separate widgets        

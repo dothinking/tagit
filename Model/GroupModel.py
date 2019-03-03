@@ -81,9 +81,23 @@ class GroupModel(TreeModel):
 
         self._currentKey = 9 # key for each item
         self._saveRequired = False  # require saving if True 
-    
+
 
     def setup(self, items=[], parent=None):
+        '''setup model data for generating the tree
+           :param items: list raw data for child items of parent, e.g.
+                        [{'key':.., 'name':.., 'children':[]}, {}, ...]
+           :param parent: parent item
+        '''
+        # reset data within beginResetModel() and endResetModel(),
+        # so that these model data could be updated explicitly
+        self.beginResetModel()        
+        self._currentKey = 9
+        self._saveRequired = False
+        self._setupData(items, parent)
+        self.endResetModel()
+
+    def _setupData(self, items=[], parent=None):
         '''setup model data for generating the tree
            :param items: list raw data for child items of parent, e.g.
                         [{'key':.., 'name':.., 'children':[]}, {}, ...]
@@ -92,12 +106,7 @@ class GroupModel(TreeModel):
         if not parent:
             parent = self.rootItem
 
-        # reset data within beginResetModel() and endResetModel(),
-        # so that these model data could be updated explicitly
-        self.beginResetModel()
         parent.reset()
-        self._currentKey = 9
-        self._saveRequired = False
         for item in items:
             # append item
             key = item.get('key')
@@ -109,8 +118,7 @@ class GroupModel(TreeModel):
             currentItem.setData(0, item.get('name'))
 
             # setup child items
-            self.setup(item.get('children', []), currentItem)
-        self.endResetModel()
+            self._setupData(item.get('children', []), currentItem)
 
     def _nextKey(self):
         '''next key for new item of this model'''
@@ -123,6 +131,21 @@ class GroupModel(TreeModel):
 
     def saveRequired(self):
         return self._saveRequired
+
+    def getIndexByKey(self, key, parent=QModelIndex()):
+        '''get ModelIndex with specified key in the associated object'''
+        for i in range(self.rowCount(parent)):
+            index = self.index(i, 0, parent)
+            if self._getItem(index).key() == key:
+                return index
+            else:
+                # attention
+                res = self.getIndexByKey(key, index) # found or QModelIndex()
+                if res.isValid():
+                    return res
+
+        return QModelIndex()
+
 
     def serialize(self):
         '''store raw data'''

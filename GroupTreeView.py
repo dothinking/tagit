@@ -27,13 +27,20 @@ class GroupTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
 
-    def setup(self, data=[]):
-        '''reset tree with specified model data'''
+    def setup(self, data=[], selected_key=2):
+        '''reset tree with specified model data,
+           and set the item with specified key as selected
+        '''
         self.model().setup(data)       
 
         # refresh tree view to activate the model setting
         self.reset()
         self.expandAll()
+
+        # set selected item
+        index = self.model().getIndexByKey(selected_key)
+        if index.isValid():
+            self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
 
     def customContextMenu(self, position):
         '''show context menu'''
@@ -108,8 +115,8 @@ if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    config = {'key': 0, 'name': 'Group', 'children': [{'key': 18, 'name': '[New Group]', 'children': [{'key': 19, 'name': '[Sub Group]'}]}, {'key': 12, 'name': '[New Group]', 'children': [{'key': 13, 'name': '[Sub Group]', 'children': [{'key': 14, 'name': '[Sub Group]', 'children': [{'key': 15, 'name': '[Sub Group]'}]}, {'key': 16, 'name': '[New Group]'}]}]}]}
+    config = {'key': 0, 'name': 'Group', 'children': [{'key': 18, 'name': '[New Group1]', 'children': [{'key': 19, 'name': '[Sub Group2]'}]}, {'key': 12, 'name': '[New Group3]', 'children': [{'key': 13, 'name': '[Sub Group4]', 'children': [{'key': 14, 'name': '[Sub Group5]', 'children': [{'key': 15, 'name': '[Sub Group6]'}]}, {'key': 16, 'name': '[New Group7]'}]}]}]}
     tree = GroupTreeView(['GROUP'])
-    tree.setup(config.get('children', []))
+    tree.setup(config.get('children', []),12)
     tree.show()
     sys.exit(app.exec_())   

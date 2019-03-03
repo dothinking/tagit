@@ -98,7 +98,7 @@ class TreeModel(QAbstractItemModel):
             childItem = parentItem.child(row)
             if childItem:
                 # creates a model index for the given row and column with the internal item.
-                return self.createIndex(row, column, childItem)        
+                return self.createIndex(row, column, childItem)
         return QModelIndex()    
 
     def parent(self, index):
