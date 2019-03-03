@@ -12,28 +12,27 @@ class MainMenu(object):
 
         # menu: (text, [sub actions])
         # action: (text, slot, shortcut, icon, tips)
-        # separator: ()
-        img_path = QFileInfo(__file__).absolutePath() + '/images/'
+        # separator: ()        
         self.raw_menus = [
             ('&File',[
-                ('&New', self.mainWindow.reset, QKeySequence.New, img_path+'new.png', 'Create new Tagit project'),
-                ('&Open ...', self.open, QKeySequence.Open, img_path+'open.png', 'Open existing project'),
-                ('&Save', self.save, QKeySequence.Save, img_path+'save.png', 'Save current project'),
+                ('&New', self.mainWindow.reset, QKeySequence.New, 'new.png', 'Create new Tagit project'),
+                ('&Open ...', self.open, QKeySequence.Open, 'open.png', 'Open existing project'),
+                ('&Save', self.save, QKeySequence.Save, 'save.png', 'Save current project'),
                 ('Save as ...', self.saveAs, None, 'Save as new a project'),
                 (),
                 ('E&xit', self.mainWindow.close, 'Ctrl+Q'),
             ]),
             ('&Edit',[
-                ('New Item', None,'Ctrl+I', None, None),
-                ('Edit Item', None, None, None, None),
-                ('Remove Item', None, None, None, None),
+                ('New Item', None,'Ctrl+I', 'item.png', 'Create item'),
+                ('Edit Item', None, None, 'edit_item.png', 'Edit item'),
+                ('Remove Item', None, None, 'del_item.png', 'Delete item'),
                 (),
-                ('New Group',self.mainWindow.groupsView().slot_insertRow,'Ctrl+G',None,None),
-                ('New Sub-Group',self.mainWindow.groupsView().slot_insertChild,None,None,None),                
-                ('Remove Group',self.mainWindow.groupsView().slot_removeRow,None,None,'Delete currently selected group'),
+                ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
+                ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
+                ('Remove Group', self.mainWindow.groupsView().slot_removeRow, None, 'del_group.png','Delete selected group'),
                 (),
-                ('New Tag',None,'Ctrl+T',None,None),
-                ('Remove Tag',None,None,None,'Delete currently selected tag'),
+                ('New Tag', None,'Ctrl+T', 'tag.png', 'Create tag'),
+                ('Remove Tag', None, None, 'del_tag','Delete selected tag'),
             ]),
             ('&View', []),
             ('&Help',[
@@ -110,11 +109,11 @@ class MainMenu(object):
         self.editToolBar.addAction(self.mapActions['remove tag'])
 
 
-
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False):
         action = QAction(text, self.mainWindow)
         if icon:
-            action.setIcon(QIcon(icon))
+            img_path = QFileInfo(__file__).absolutePath() + '/images/'
+            action.setIcon(QIcon(img_path+icon))
         if shortcut:
             action.setShortcut(shortcut)
         if tip:
