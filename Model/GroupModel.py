@@ -79,7 +79,8 @@ class GroupModel(TreeModel):
         rootItem = GroupItem(0, header) # root item
         super(GroupModel, self).__init__(rootItem, parent)
 
-        self.currentKey = 9
+        self._currentKey = 9 # key for each item
+        self._saveRequired = False  # require saving if True 
     
 
     def setup(self, items=[], parent=None):
@@ -95,13 +96,14 @@ class GroupModel(TreeModel):
         # so that these model data could be updated explicitly
         self.beginResetModel()
         parent.reset()
-        self.currentKey = 9
+        self._currentKey = 9
+        self._saveRequired = False
         for item in items:
             # append item
             key = item.get('key')
             parent.insertChildren(parent.childCount(), key, 1, 1)
-            if self.currentKey<key:
-                self.currentKey = key
+            if self._currentKey<key:
+                self._currentKey = key
             # set name
             currentItem = parent.child(parent.childCount() -1)
             currentItem.setData(0, item.get('name'))
@@ -110,16 +112,26 @@ class GroupModel(TreeModel):
             self.setup(item.get('children', []), currentItem)
         self.endResetModel()
 
-
     def _nextKey(self):
         '''next key for new item of this model'''
-        self.currentKey += 1
-        return self.currentKey
+        self._currentKey += 1
+        return self._currentKey
 
     def isDefaultItem(self, index):
         '''first two items under root is default item'''
         return not index.parent().isValid() and index.row()<2
 
+    def saveRequired(self):
+        return self._saveRequired
+
+    def serialize(self):
+        '''store raw data'''
+        self._saveRequired = False # saved
+        return self.rootItem.serialize()
+
+    # --------------------------------------------------------------
+    # ------------ default methods requiring overloaded ------------
+    # --------------------------------------------------------------
     def flags(self, index):
         '''tree item status'''
         if not index.isValid():
@@ -139,6 +151,10 @@ class GroupModel(TreeModel):
         success = parentItem.insertChildren(position, self._nextKey(), rows, self.rootItem.columnCount())
         self.endInsertRows()
 
+        # flag for saving model
+        if success:
+            self._saveRequired = True
+
         return success
     
     def removeRows(self, position, rows, parent=QModelIndex()):
@@ -148,6 +164,10 @@ class GroupModel(TreeModel):
         parentItem = self._getItem(parent)
         success = parentItem.removeChildren(position, rows)
         self.endRemoveRows()
+
+        # flag for saving model
+        if success:
+            self._saveRequired = True           
 
         return success
 
@@ -180,13 +200,12 @@ class GroupModel(TreeModel):
 
         # emit signal if successed
         if result:
+            self._saveRequired = True
             self.dataChanged.emit(index, index)
 
         return result
 
-    def serialize(self):
-        '''store raw data'''
-        return self.rootItem.serialize()
+
 
 if __name__ == '__main__':
 

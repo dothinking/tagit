@@ -2,7 +2,7 @@
 # 
 from PyQt5.QtCore import QFileInfo
 from PyQt5.QtGui import (QIcon, QKeySequence)
-from PyQt5.QtWidgets import (QFileDialog, QMessageBox, QAction)
+from PyQt5.QtWidgets import (QApplication, QFileDialog, QMessageBox, QAction)
 
 
 class MainMenu(object):
@@ -15,7 +15,7 @@ class MainMenu(object):
         # separator: ()        
         self.raw_menus = [
             ('&File',[
-                ('&New', self.mainWindow.reset, QKeySequence.New, 'new.png', 'Create new Tagit project'),
+                ('&New', self.new, QKeySequence.New, 'new.png', 'Create new Tagit project'),
                 ('&Open ...', self.open, QKeySequence.Open, 'open.png', 'Open existing project'),
                 ('&Save', self.save, QKeySequence.Save, 'save.png', 'Save current project'),
                 ('Save as ...', self.saveAs, None, 'Save as new a project'),
@@ -47,7 +47,7 @@ class MainMenu(object):
 
         # menu status
         self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
-        self.mainWindow.tabWidget.currentChanged.connect(self.refreshMenus)
+        QApplication.instance().focusChanged.connect(self.refreshMenus)
 
     def createMenus(self, parent=None, config=None):
         '''init menu
@@ -78,7 +78,7 @@ class MainMenu(object):
 
     def refreshMenus(self):
         '''set enable status of menu actions'''
-        group_activated = self.mainWindow.tabWidget.currentIndex() == 0
+        group_activated = self.mainWindow.groupsView().hasFocus()
         group_selected = not self.mainWindow.groupsView().selectionModel().selection().isEmpty()
         group_default = False
         if group_selected:
@@ -108,7 +108,6 @@ class MainMenu(object):
         self.editToolBar.addAction(self.mapActions['new tag'])
         self.editToolBar.addAction(self.mapActions['remove tag'])
 
-
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False):
         action = QAction(text, self.mainWindow)
         if icon:
@@ -125,22 +124,30 @@ class MainMenu(object):
             action.setCheckable(True)
         return action
 
-    def open(self):
-        '''open existing project'''
-        filename, _ = QFileDialog.getOpenFileName(self.mainWindow, 
-            'Open Prpject...', '', 
-            'Tagit Project (*.dat);;All Files (*)')
-        if not filename:
-            return
+    def new(self):
+        if self.maybeSave():
+            self.mainWindow.reset()
+            self.refreshMenus()
 
-        if not self.mainWindow.loadDatabase(filename):
-            QMessageBox.critical(None, "Error", "Invalid database for Tagit project.")
+    def open(self):
+        if self.maybeSave():
+            '''open existing project'''
+            filename, _ = QFileDialog.getOpenFileName(self.mainWindow, 
+                'Open Prpject...', '', 
+                'Tagit Project (*.dat);;All Files (*)')
+            if not filename:
+                return
+
+            if self.mainWindow.loadDatabase(filename):
+                self.refreshMenus()
+            else:
+                QMessageBox.critical(None, "Error", "Invalid database for Tagit project.")
 
     def save(self):
         '''save current database'''
         filename = self.mainWindow.database()
         if filename:
-            self.mainWindow.serialize(filename)
+            return self.mainWindow.serialize(filename)
         else:
             self.saveAs()
 
@@ -150,4 +157,21 @@ class MainMenu(object):
             'Save Prpject as...', '', 
             'Tagit Project (*.dat);;All Files (*)')
         if filename:
-            self.mainWindow.serialize(filename)
+            return self.mainWindow.serialize(filename)
+        else:
+            return False
+
+    def maybeSave(self):
+        '''show message dialog if the application is not saved'''
+        if self.mainWindow.saveRequired():
+            ret = QMessageBox.warning(self.mainWindow, "Application",
+                    "Current project has been modified.\nDo you want to save your changes?",
+                    QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+
+            if ret == QMessageBox.Save:                
+                return self.save()
+
+            if ret == QMessageBox.Cancel:
+                return False
+
+        return True

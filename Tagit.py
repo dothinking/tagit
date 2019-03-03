@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
     def database(self):
         return self._database 
 
-    # --------------- data operation ---------------
+    # --------------- data operation --------------- 
     def reset(self):
         '''clear data'''
         self._database = None
@@ -94,6 +94,17 @@ class MainWindow(QMainWindow):
 
         return True
 
+    def closeEvent(self, event):
+        '''default method called when trying to close the app'''
+        if self.main_menu.maybeSave():
+            event.accept()
+        else:
+            event.ignore()
+
+    def saveRequired(self):
+        '''saving is required if anything is changed'''
+        return self.groupTreeView.model().saveRequired()
+
     def serialize(self, filename):
         '''save project data to database'''        
         data = {
@@ -110,6 +121,9 @@ class MainWindow(QMainWindow):
             # set current database
             self._database = filename
             self.setTitle()
+            return True
+
+        return False
 
     # --------------- user interface ---------------
     def setupViews(self):
