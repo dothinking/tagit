@@ -95,9 +95,10 @@ class GroupModel(TreeModel):
         # so that these model data could be updated explicitly
         self.beginResetModel()
         parent.reset()
+        self.currentKey = 9
         for item in items:
             # append item
-            key = item.get('key')            
+            key = item.get('key')
             parent.insertChildren(parent.childCount(), key, 1, 1)
             if self.currentKey<key:
                 self.currentKey = key

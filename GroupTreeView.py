@@ -3,7 +3,7 @@
 # 
 
 from PyQt5.QtCore import QItemSelectionModel, QModelIndex, Qt
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu, QAction
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu, QAction, QMessageBox
 
 from Model.GroupModel import GroupModel
 
@@ -88,7 +88,14 @@ class GroupTreeView(QTreeView):
             model.setData(child, "[New Group]")
 
     def slot_removeRow(self):
+        '''delete selected item'''
         index = self.selectionModel().currentIndex()
+        reply = QMessageBox.question(self, 'Confirm', self.tr(
+            "Confirm to remove '{0}'?\n"
+            "The items under this group will not be deleted.".format(index.data())), QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            return
+        
         model = self.model()
         if not model.isDefaultItem(index): 
             model.removeRow(index.row(), index.parent())
