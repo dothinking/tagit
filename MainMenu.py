@@ -31,8 +31,8 @@ class MainMenu(object):
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
                 ('Remove Group', self.mainWindow.groupsView().slot_removeRow, None, 'del_group.png','Delete selected group'),
                 (),
-                ('New Tag', None,'Ctrl+T', 'tag.png', 'Create tag'),
-                ('Remove Tag', None, None, 'del_tag','Delete selected tag'),
+                ('New Tag', self.mainWindow.tagsView().slot_insertRow,'Ctrl+T', 'tag.png', 'Create tag'),
+                ('Remove Tag', self.mainWindow.tagsView().slot_removeRow, None, 'del_tag','Delete selected tag'),
             ]),
             ('&View', []),
             ('&Help',[
@@ -47,6 +47,7 @@ class MainMenu(object):
 
         # menu status
         self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
+        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.refreshMenus)
         QApplication.instance().focusChanged.connect(self.refreshMenus)
 
     def createMenus(self, parent=None, config=None):
@@ -78,6 +79,7 @@ class MainMenu(object):
 
     def refreshMenus(self):
         '''set enable status of menu actions'''
+        # groups menu
         group_activated = self.mainWindow.groupsView().hasFocus()
         group_selected = not self.mainWindow.groupsView().selectionModel().selection().isEmpty()
         group_default = False
@@ -87,6 +89,16 @@ class MainMenu(object):
         self.mapActions['new group'].setEnabled(group_activated and group_selected)
         self.mapActions['new sub-group'].setEnabled(group_activated and group_selected and not group_default)
         self.mapActions['remove group'].setEnabled(group_activated and group_selected and not group_default)
+
+        # tags menu
+        tag_activated = self.mainWindow.tagsView().hasFocus()
+        tag_selected = not self.mainWindow.tagsView().selectionModel().selection().isEmpty()
+        tag_default = False
+        if tag_selected:
+            i_index = self.mainWindow.tagsView().selectionModel().currentIndex()
+            tag_default = self.mainWindow.tagsView().model().isDefaultItem(i_index)
+        self.mapActions['new tag'].setEnabled(tag_activated and tag_selected)
+        self.mapActions['remove tag'].setEnabled(tag_activated and tag_selected and not tag_default)
 
     def createToolBars(self):
         '''create tool bar based on menu items'''
