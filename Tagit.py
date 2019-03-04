@@ -9,6 +9,7 @@ import pickle
 
 from MainMenu import MainMenu
 from GroupTreeView import GroupTreeView
+from TagTableView import TagTableView
 
 
 class MainWindow(QMainWindow):
@@ -17,20 +18,7 @@ class MainWindow(QMainWindow):
     app_version = '0.5'
     key_group = 'groups'
     key_tag = 'tags'
-
-    class Settings(object):
-        def __init__(self):
-            self.setting = QSettings('dothinking', 'tagit')
-
-        def get(self, key, default=None):
-            return self.setting.value(key, default)
-
-        def set(self, key, value=None):
-            if isinstance(key, str):
-                self.setting.setValue(key, value)
-            elif isinstance(key, dict):
-                for k, v in key:
-                    self.setting.setValue(k, v)
+    key_setting = 'settings'
 
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -42,8 +30,8 @@ class MainWindow(QMainWindow):
         self.createMainMenu()
 
         # init data: last saved database
-        self.setting = self.Settings()
-        filename = self.setting.get('database')
+        self.setting = QSettings('dothinking', 'tagit')
+        filename = self.setting.value('database')
         self.initData(filename)
 
         # status bar
@@ -58,10 +46,10 @@ class MainWindow(QMainWindow):
     # --------------- properties ---------------
     # ----------------------------------------------
     def groupsView(self):
-        return self.groupTreeView
+        return self.groupsTreeView
 
     def tagsView(self):
-        return self.tagsView
+        return self.tagsTableView
 
     def database(self):
         return self._database 
@@ -75,6 +63,12 @@ class MainWindow(QMainWindow):
            - database is not specified -> init by default and return true
            - specified but is invalid  -> init by default but return false
         '''
+        default_groups = [
+            {'key':1, 'name':'Imported'},
+            {'key':2, 'name':'All Groups'},
+        ]
+        default_tags = [[1, 'No Tag', '#000000']]
+
         ok = True
         if database and os.path.exists(database):
             # load database
@@ -86,40 +80,32 @@ class MainWindow(QMainWindow):
             else:
                 if self.app_name in data: # valid database
                     self._database = database
-                    self._initFromDatabase(data)
+                    self._initData(default_groups, default_tags, data)
                     return ok
                 else:
                     ok = False
 
         # init by default if load data from database failed
         self._database = None
-        self._initByDefault()
+        self._initData(default_groups, default_tags)
 
         return ok
-
-    def _initByDefault(self):
-        '''init default data'''
-        # set window title      
-        self.setTitle()
-        self.groupTreeView.setFocus()
-
-        # init groups tree view
-        default_groups = [
-            {'key':1, 'name':'Imported'},
-            {'key':2, 'name':'All Groups'},
-        ]
-        self.groupTreeView.setup(default_groups, 2)      
         
-    def _initFromDatabase(self, data):
+    def _initData(self, default_groups, default_tags, data={}):
         '''load data from database'''
         # set window title      
         self.setTitle()
-        self.groupTreeView.setFocus()
+        self.groupsTreeView.setFocus()
 
         # init groups tree view
-        groups = data.get(self.key_group, {}).get('children', [])
-        key = self.setting.get('selected_group', 2)
-        self.groupTreeView.setup(groups, key)
+        groups = data.get(self.key_group, {}).get('children', default_groups)
+        key = data.get(self.key_setting, {}).get('selected_group', 2)
+        self.groupsTreeView.setup(groups, key)
+
+        # init tags table view
+        tags = data.get(self.key_tag, [[1, 'No Tag', '#000000']])
+        key = data.get(self.key_setting, {}).get('selected_tag', 1)
+        self.tagsTableView.setup(tags, key)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -130,14 +116,38 @@ class MainWindow(QMainWindow):
 
     def saveRequired(self):
         '''saving is required if anything is changed'''
-        return self.groupTreeView.model().saveRequired()
+        return (
+            self.groupsTreeView.model().saveRequired() 
+            or self.tagsTableView.model().saveRequired()
+            )
 
     def serialize(self, filename):
-        '''save project data to database'''        
+        '''save project data to database'''
+        # current group
+        if self.groupsTreeView.selectedIndexes():
+            index = self.groupsTreeView.selectionModel().currentIndex()
+            selected_group = index.internalPointer().key()
+        else:
+            selected_group = -1
+
+        # current tag
+        if self.tagsTableView.selectedIndexes():
+            index = self.tagsTableView.selectionModel().currentIndex()
+            selected_tag = self.tagsTableView.model().getKeyByIndex(index)
+        else:
+            selected_tag = -1
+
+        # collect all data
         data = {
             self.app_name: self.app_version,
-            self.key_group: self.groupTreeView.model().serialize()
+            self.key_group: self.groupsTreeView.model().serialize(),
+            self.key_tag: self.tagsTableView.model().serialize(),
+            self.key_setting: {'selected_group': selected_group,
+                'selected_tag': selected_tag},
         }
+        # print(data)
+
+        # dump pickle file
         try:
             with open(filename, 'wb') as f:
                 pickle.dump(data, f)
@@ -145,23 +155,12 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(None, "Error", "Could not save current project to\n {0}.".format(filename))
         else:
             self._database = filename
-            self._writeSettings()
+            self.setting.setValue('database', filename)
             self.setTitle()
+            self.statusBar().showMessage('File saved.')
             return True
 
         return False
-
-    def _writeSettings(self):
-        '''config data written in QSetting'''
-        # current database
-        self.setting.set('database', self._database)
-
-        # current group
-        if self.groupTreeView.selectedIndexes():
-            index = self.groupTreeView.selectionModel().currentIndex()
-            key = index.internalPointer().key()
-            self.setting.set('selected_group', key)
-
 
     # ----------------------------------------------
     # --------------- user interface ---------------
@@ -169,14 +168,14 @@ class MainWindow(QMainWindow):
     def setupViews(self):
         '''create main views'''
         # separate widgets        
-        self.groupTreeView = GroupTreeView(['GROUP']) # groups tree view        
-        self.tagsView = QWidget() # tags table widget: to do        
+        self.groupsTreeView = GroupTreeView(['GROUP']) # groups tree view        
+        self.tagsTableView = TagTableView(['Tag', 'Color']) # tags table view
         self.textEdit = QTextEdit() # main table widget: to do
 
         # arranged views
         self.tabWidget = QTabWidget()
-        self.tabWidget.addTab(self.groupTreeView, "Groups")
-        self.tabWidget.addTab(self.tagsView, "Tags")
+        self.tabWidget.addTab(self.groupsTreeView, "Groups")
+        self.tabWidget.addTab(self.tagsTableView, "Tags")
 
         splitter = QSplitter()        
         splitter.addWidget(self.tabWidget)

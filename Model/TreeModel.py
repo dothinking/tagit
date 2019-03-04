@@ -68,6 +68,11 @@ class TreeModel(QAbstractItemModel):
 
         return self.rootItem
 
+    def rowCount(self, parent=QModelIndex()):
+        '''count rows under the given parent'''
+        parentItem = self._getItem(parent)
+        return parentItem.childCount()
+
     def columnCount(self, parent=QModelIndex()):
         '''count of tree item columns'''
         return self.rootItem.columnCount()
@@ -114,7 +119,4 @@ class TreeModel(QAbstractItemModel):
         else:
             return self.createIndex(parentItem.childNumber(), 0, parentItem)
 
-    def rowCount(self, parent=QModelIndex()):
-        '''count rows under the given parent'''
-        parentItem = self._getItem(parent)
-        return parentItem.childCount()
+    

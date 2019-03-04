@@ -2,8 +2,8 @@
 # append, insert child, remove, edit text
 # 
 
-from PyQt5.QtCore import QItemSelectionModel, QModelIndex, Qt
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu, QAction, QMessageBox
+from PyQt5.QtCore import (QItemSelectionModel, Qt)
+from PyQt5.QtWidgets import (QTreeView, QMenu, QAction, QMessageBox)
 
 from Model.GroupModel import GroupModel
 
@@ -73,9 +73,7 @@ class GroupTreeView(QTreeView):
             return
 
         # insert
-        if not model.insertRow(0, index):
-            return
-        else:
+        if model.insertRow(0, index):
             child = model.index(0, 0, index)
             model.setData(child, "[Sub Group]")
             self.selectionModel().setCurrentIndex(child, QItemSelectionModel.ClearAndSelect)
@@ -87,12 +85,10 @@ class GroupTreeView(QTreeView):
 
         # could not prepend item to default items
         row = 2 if model.isDefaultItem(index) else index.row() + 1
-
-        if not model.insertRow(row, index.parent()):
-            return
-        else:
+        if model.insertRow(row, index.parent()):
             child = model.index(row, 0, index.parent())
             model.setData(child, "[New Group]")
+            self.selectionModel().setCurrentIndex(child, QItemSelectionModel.ClearAndSelect)
 
     def slot_removeRow(self):
         '''delete selected item'''

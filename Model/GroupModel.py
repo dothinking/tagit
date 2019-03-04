@@ -158,7 +158,7 @@ class GroupModel(TreeModel):
     def flags(self, index):
         '''tree item status'''
         if not index.isValid():
-            return 0
+            return Qt.NoItemFlags
 
         # default items should not be modified
         item = self._getItem(index)
