@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
             {'key':1, 'name':'Imported'},
             {'key':2, 'name':'All Groups'},
         ]
-        default_tags = [[1, 'No Tag', '#000000']]
+        default_tags = [[-1, 'No Tag', '#000000']]
 
         ok = True
         if database and os.path.exists(database):
@@ -106,6 +106,7 @@ class MainWindow(QMainWindow):
         tags = data.get(self.key_tag, [[1, 'No Tag', '#000000']])
         key = data.get(self.key_setting, {}).get('selected_tag', 1)
         self.tagsTableView.setup(tags, key)
+        self.tagsTableView.setColumnHidden(0, True) # hide first column -> key
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -145,7 +146,7 @@ class MainWindow(QMainWindow):
             self.key_setting: {'selected_group': selected_group,
                 'selected_tag': selected_tag},
         }
-        # print(data)
+        print(data)
 
         # dump pickle file
         try:
@@ -169,7 +170,7 @@ class MainWindow(QMainWindow):
         '''create main views'''
         # separate widgets        
         self.groupsTreeView = GroupTreeView(['GROUP']) # groups tree view        
-        self.tagsTableView = TagTableView(['Tag', 'Color']) # tags table view
+        self.tagsTableView = TagTableView(['key', 'Tag', 'Color']) # tags table view
         self.textEdit = QTextEdit() # main table widget: to do
 
         # arranged views

@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (QHeaderView, QTableView, QMenu, QAction, QMessageBo
 
 from Model.TagModel import TagModel, TagDelegate
 
+
 class TagTableView(QTableView):
     def __init__(self, header, parent=None):
         super(TagTableView, self).__init__(parent)
@@ -17,7 +18,7 @@ class TagTableView(QTableView):
         self.setSelectionMode(QTableView.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectRows)
         self.setAlternatingRowColors(True)
-        self.resizeColumnsToContents()      
+        self.resizeColumnsToContents()
 
         # model
         model = TagModel(header)
@@ -31,14 +32,14 @@ class TagTableView(QTableView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
 
-    def setup(self, data=[], selected_key=1):
+    def setup(self, data=[], selected_key=-1):
         '''reset tag table with specified model data,
            and set the row with specified key as selected
         '''
         self.model().setup(data)
         self.reset()
         # set selected item
-        index = self.model().getIndexByKey(selected_key)
+        index = self.model().getIndexByKey(selected_key)        
         if index.isValid():
             # self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
             self.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect)
@@ -72,15 +73,22 @@ class TagTableView(QTableView):
 
         row = index.row() + 1
         if model.insertRow(row, index.parent()):
-            child = model.index(row, 0, index.parent())
-            self.selectionModel().setCurrentIndex(child, QItemSelectionModel.ClearAndSelect)
+            child_key = model.index(row, 0, index.parent())
+            child_name = model.index(row, 1, index.parent())
+            child_color = model.index(row, 2, index.parent())
+
+            # set default data
+            model.setData(child_key, model.nextKey())
+            model.setData(child_name, 'New Tag')
+            model.setData(child_color, '#000000')
+            self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
 
             # enter editing status and quit when finished
-            self.openPersistentEditor(child)
-            editWidget = self.indexWidget(child)
+            self.openPersistentEditor(child_name)
+            editWidget = self.indexWidget(child_name)
             if editWidget:
                 editWidget.setFocus()
-                editWidget.editingFinished.connect(lambda:self.slot_finishedEditing(child))
+                editWidget.editingFinished.connect(lambda:self.slot_finishedEditing(child_name))
 
 
     def slot_removeRow(self):
