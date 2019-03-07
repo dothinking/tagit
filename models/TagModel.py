@@ -3,7 +3,7 @@
 
 from PyQt5.QtCore import QModelIndex, Qt, QRect, QEvent
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (QStyledItemDelegate, QStyle, QStyleOptionButton, 
+from PyQt5.QtWidgets import (QStyledItemDelegate, QHBoxLayout,QWidget,QStyle, QStyleOptionButton, 
     QColorDialog, QPushButton)
 
 from .TableModel import TableModel
@@ -62,7 +62,7 @@ class TagModel(TableModel):
             return Qt.ItemIsEnabled
 
         if index.column() != NAME:
-            return Qt.ItemIsEnabled
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
  
@@ -78,9 +78,9 @@ class TagDelegate(QStyledItemDelegate):
         R = option.rect
         h = self.ratio*R.height()
         w = h
-        x = R.left() + (R.width()-w)/2
-        y = R.top() + (1-self.ratio)/2*R.height()
-        return QRect(x,y,w,h)
+        dx = (R.width()-w)/2
+        dy = (1-self.ratio)/2*R.height()
+        return R.adjusted(dx, dy, -dx, -dy)
 
     def paint(self, painter, option, index):
         '''paint item in column 1 as user defined'''

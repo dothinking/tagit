@@ -3,9 +3,10 @@
 # 
 
 from PyQt5.QtCore import QItemSelectionModel, Qt
-from PyQt5.QtWidgets import (QHeaderView, QTableView, QMenu, QAction, QMessageBox)
+from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
+from PyQt5.QtGui import QColor
 
-from Model.TagModel import TagModel, TagDelegate
+from models.TagModel import TagModel, TagDelegate
 
 
 class TagTableView(QTableView):
@@ -19,18 +20,20 @@ class TagTableView(QTableView):
         self.setSelectionBehavior(QTableView.SelectRows)
         self.setAlternatingRowColors(True)
         self.resizeColumnsToContents()
+        self.verticalHeader().hide()
 
         # model
         model = TagModel(header)
         self.setModel(model)
 
         # delegate
-        delegate = TagDelegate()
+        delegate = TagDelegate(self)
         self.setItemDelegate(delegate)
 
         # context menu
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
+
 
     def setup(self, data=[], selected_key=-1):
         '''reset tag table with specified model data,

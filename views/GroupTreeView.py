@@ -5,7 +5,7 @@
 from PyQt5.QtCore import (QItemSelectionModel, Qt)
 from PyQt5.QtWidgets import (QTreeView, QMenu, QAction, QMessageBox)
 
-from Model.GroupModel import GroupModel
+from models.GroupModel import GroupModel
 
 class GroupTreeView(QTreeView):
     def __init__(self, header, parent=None):

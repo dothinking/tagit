@@ -58,6 +58,8 @@ class TableModel(QAbstractTableModel):
         '''header data'''
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self.headers[section]
+        if orientation == Qt.Vertical and role == Qt.DisplayRole:
+            return section+1
 
         return None
 

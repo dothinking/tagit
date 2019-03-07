@@ -44,10 +44,13 @@ class MainMenu(object):
             ])
         ]
         self.mapActions = {} # name -> action/menu
+        path = QFileInfo(__file__).absolutePath()
+        self.img_path = QFileInfo(path).absolutePath() + '/images/'
 
         # menu status
         self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
         self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.refreshMenus)
+        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.refreshMenus)
         QApplication.instance().focusChanged.connect(self.refreshMenus)
 
     def createMenus(self, parent=None, config=None):
@@ -100,6 +103,12 @@ class MainMenu(object):
         self.mapActions['new tag'].setEnabled(tag_activated and tag_selected)
         self.mapActions['remove tag'].setEnabled(tag_activated and tag_selected and not tag_default)
 
+        # items menu
+        item_activated = self.mainWindow.itemsView().hasFocus()
+        item_selected = not self.mainWindow.itemsView().selectionModel().selection().isEmpty()
+        self.mapActions['edit item'].setEnabled(item_activated and item_selected)
+        self.mapActions['remove item'].setEnabled(item_activated and item_selected)
+
     def createToolBars(self):
         '''create tool bar based on menu items'''
         # files
@@ -122,9 +131,8 @@ class MainMenu(object):
 
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False):
         action = QAction(text, self.mainWindow)
-        if icon:
-            img_path = QFileInfo(__file__).absolutePath() + '/images/'
-            action.setIcon(QIcon(img_path+icon))
+        if icon:            
+            action.setIcon(QIcon(self.img_path+icon))
         if shortcut:
             action.setShortcut(shortcut)
         if tip:
