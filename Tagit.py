@@ -2,14 +2,15 @@ from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtGui import (QIcon, QKeySequence)
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QTabWidget, QAction, 
-    QFileDialog, QMainWindow, QMessageBox, QTextEdit, QSplitter)
+    QFileDialog, QMainWindow, QMessageBox, QSplitter)
 
 import os
 import pickle
 
-from MainMenu import MainMenu
-from GroupTreeView import GroupTreeView
-from TagTableView import TagTableView
+from views.MainMenu import MainMenu
+from views.GroupTreeView import GroupTreeView
+from views.TagTableView import TagTableView
+from views.ItemTableView import ItemTableView
 
 
 class MainWindow(QMainWindow):
@@ -18,6 +19,7 @@ class MainWindow(QMainWindow):
     app_version = '0.5'
     key_group = 'groups'
     key_tag = 'tags'
+    key_item = 'items'
     key_setting = 'settings'
 
     def __init__(self):
@@ -51,6 +53,9 @@ class MainWindow(QMainWindow):
     def tagsView(self):
         return self.tagsTableView
 
+    def itemsView(self):
+        return self.itemsTableView
+
     def database(self):
         return self._database 
 
@@ -64,10 +69,10 @@ class MainWindow(QMainWindow):
            - specified but is invalid  -> init by default but return false
         '''
         default_groups = [
-            {'key':1, 'name':'Imported'},
+            {'key':1, 'name':'Ungrouped'},
             {'key':2, 'name':'All Groups'},
         ]
-        default_tags = [[-1, 'No Tag', '#000000']]
+        default_tags = [[-1, 'Untagged', '#000000']]        
 
         ok = True
         if database and os.path.exists(database):
@@ -103,10 +108,18 @@ class MainWindow(QMainWindow):
         self.groupsTreeView.setup(groups, key)
 
         # init tags table view
-        tags = data.get(self.key_tag, [[1, 'No Tag', '#000000']])
+        tags = data.get(self.key_tag, default_tags)
         key = data.get(self.key_setting, {}).get('selected_tag', 1)
         self.tagsTableView.setup(tags, key)
         self.tagsTableView.setColumnHidden(0, True) # hide first column -> key
+
+        # init items table view
+        default_items = [['xxx',1,[2,3],'xxxxx','2019-03-07','comments'],['xxxxxx',3,'[2,3]','xxxxx','2019-03-07','comments']]
+        items = data.get(self.key_item, default_items)
+        self.itemsTableView.setup(items)
+        self.itemsTableView.setColumnHidden(1, True)
+        self.itemsTableView.setColumnHidden(3, True)
+        self.itemsTableView.setColumnHidden(5, True)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -140,9 +153,10 @@ class MainWindow(QMainWindow):
 
         # collect all data
         data = {
-            self.app_name: self.app_version,
-            self.key_group: self.groupsTreeView.model().serialize(),
-            self.key_tag: self.tagsTableView.model().serialize(),
+            self.app_name   : self.app_version,
+            self.key_group  : self.groupsTreeView.model().serialize(),
+            self.key_tag    : self.tagsTableView.model().serialize(),
+            self.key_item   : self.itemsTableView.model().serialize(),
             self.key_setting: {'selected_group': selected_group,
                 'selected_tag': selected_tag},
         }
@@ -171,7 +185,7 @@ class MainWindow(QMainWindow):
         # separate widgets        
         self.groupsTreeView = GroupTreeView(['GROUP']) # groups tree view        
         self.tagsTableView = TagTableView(['key', 'Tag', 'Color']) # tags table view
-        self.textEdit = QTextEdit() # main table widget: to do
+        self.itemsTableView = ItemTableView(['Title', 'Group', 'Tags', 'Path', 'Date', 'Notes']) # main table widget: to do
 
         # arranged views
         self.tabWidget = QTabWidget()
@@ -180,7 +194,7 @@ class MainWindow(QMainWindow):
 
         splitter = QSplitter()        
         splitter.addWidget(self.tabWidget)
-        splitter.addWidget(self.textEdit)
+        splitter.addWidget(self.itemsTableView)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         self.setCentralWidget(splitter)
