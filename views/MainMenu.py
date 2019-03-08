@@ -23,9 +23,9 @@ class MainMenu(object):
                 ('E&xit', self.mainWindow.close, 'Ctrl+Q'),
             ]),
             ('&Edit',[
-                ('New Item', None,'Ctrl+I', 'item.png', 'Create item'),
+                ('New Item', self.mainWindow.itemsView().slot_appendRow,'Ctrl+I', 'item.png', 'Create item'),
                 ('Edit Item', None, None, 'edit_item.png', 'Edit item'),
-                ('Remove Item', None, None, 'del_item.png', 'Delete item'),
+                ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
                 (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                

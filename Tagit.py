@@ -116,10 +116,10 @@ class MainWindow(QMainWindow):
         # init items table view
         default_items = [['xxx',1,[2,3],'xxxxx','2019-03-07','comments'],['xxxxxx',3,'[2,3]','xxxxx','2019-03-07','comments']]
         items = data.get(self.key_item, default_items)
-        self.itemsTableView.setup(items)
-        self.itemsTableView.setColumnHidden(1, True)
-        self.itemsTableView.setColumnHidden(3, True)
-        self.itemsTableView.setColumnHidden(5, True)
+        self.itemsTableView.setup(items, groups)
+        # self.itemsTableView.setColumnHidden(1, True)
+        # self.itemsTableView.setColumnHidden(3, True)
+        # self.itemsTableView.setColumnHidden(5, True)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -133,14 +133,15 @@ class MainWindow(QMainWindow):
         return (
             self.groupsTreeView.model().saveRequired() 
             or self.tagsTableView.model().saveRequired()
+            or self.itemsTableView.model().saveRequired()
             )
 
     def serialize(self, filename):
         '''save project data to database'''
         # current group
         if self.groupsTreeView.selectedIndexes():
-            index = self.groupsTreeView.selectionModel().currentIndex()
-            selected_group = index.internalPointer().key()
+            index = self.groupsTreeView.selectionModel().selectedRows()
+            selected_group = index[0].internalPointer().key()
         else:
             selected_group = -1
 

@@ -14,17 +14,30 @@ class ItemModel(TableModel):
     def __init__(self, headers, parent=None):        
         super(ItemModel, self).__init__(headers, parent)
 
-
-
     def flags(self, index):
         '''item status'''
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        if index.column() != NAME:
+        if index.column() not in (NAME, TAGS):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def data(self, index, role=Qt.DisplayRole):
+        '''Table view could get data from this model'''
+        if role != Qt.DisplayRole and role != Qt.EditRole:
+            return None
+
+        if not self.checkIndex(index):
+            return None
+
+        row, col = index.row(), index.column() 
+
+        if index.column() == TAGS:
+            return ','.join(self.dataList[row][col])
+               
+        return self.dataList[row][col]
  
 
 class TagDelegate(QStyledItemDelegate):

@@ -9,7 +9,7 @@ class TableModel(QAbstractTableModel):
         super(TableModel, self).__init__(parent)
         self.headers = headers
         # data in table: [[...], [...], ...]
-        self.data = []
+        self.dataList = []
 
         # require saving if any changes are made
         self._saveRequired = False    
@@ -19,7 +19,7 @@ class TableModel(QAbstractTableModel):
            it is convenient to reset data after the model is created
         '''
         self.beginResetModel()
-        self.data = items        
+        self.dataList = items        
         self.endResetModel()
 
     def checkIndex(self, index):
@@ -27,7 +27,7 @@ class TableModel(QAbstractTableModel):
             return False
 
         row, col = index.row(), index.column()
-        if row<0 or row>=len(self.data):
+        if row<0 or row>=len(self.dataList):
             return False
 
         if col<0 or col>=len(self.headers):
@@ -40,7 +40,7 @@ class TableModel(QAbstractTableModel):
 
     def serialize(self):
         self._saveRequired = False # saved
-        return [item for item in self.data]
+        return [item for item in self.dataList]
 
     
     # --------------------------------------------------------------
@@ -48,7 +48,7 @@ class TableModel(QAbstractTableModel):
     # --------------------------------------------------------------
     def rowCount(self, index=QModelIndex()):
         '''count of rows'''
-        return len(self.data)
+        return len(self.dataList)
  
     def columnCount(self, index=QModelIndex()):
         '''count of columns'''
@@ -72,7 +72,7 @@ class TableModel(QAbstractTableModel):
             return None
 
         row, col = index.row(), index.column()        
-        return self.data[row][col]
+        return self.dataList[row][col]
  
     # --------------------------------------------------------------
     # reimplemented methods for editing data
@@ -86,7 +86,7 @@ class TableModel(QAbstractTableModel):
             return False
 
         row, col = index.row(), index.column()
-        self.data[row][col] = value
+        self.dataList[row][col] = value
 
         # emit signal if successed
         self._saveRequired = True
@@ -104,13 +104,13 @@ class TableModel(QAbstractTableModel):
     def insertRows(self, position, rows=1, parent=QModelIndex()):
         '''insert rows at given position'''
         # check range
-        if position < 0 or position>len(self.data): 
+        if position < 0 or position>len(self.dataList): 
             return False
 
         self.beginInsertRows(parent, position, position+rows-1)
         for row in range(rows):
             data = [None for col in range(len(self.headers))]
-            self.data.insert(position, data)
+            self.dataList.insert(position, data)
         self.endInsertRows()
 
         # flag for saving model
@@ -120,12 +120,12 @@ class TableModel(QAbstractTableModel):
  
     def removeRows(self, position, rows=1, parent=QModelIndex()):
         '''delete rows at position'''        
-        if position < 0 or position+rows>len(self.data):
+        if position < 0 or position+rows>len(self.dataList):
             return False
 
         self.beginRemoveRows(parent, position, position+rows-1)
         for row in range(rows):
-            self.data.pop(position)
+            self.dataList.pop(position)
         self.endRemoveRows()
 
         # flag for saving model
