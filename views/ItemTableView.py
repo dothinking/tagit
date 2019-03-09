@@ -6,13 +6,12 @@ import os
 import time
 
 from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex
-from PyQt5.QtWidgets import (QHeaderView, QTableView, QMenu, QAction, 
-    QDialog, QFileDialog, QMessageBox, QDialogButtonBox, QPushButton,
-    QLabel, QHBoxLayout, QGridLayout, QLineEdit, QGroupBox, QRadioButton)
+from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction
 
-from models.ItemModel import (ItemModel, TagDelegate,
+from models.ItemModel import (ItemModel, ItemDelegate,
     NAME, GROUP, TAGS, PATH, DATE, NOTES)
 
+from views.CreateItemDialog import CreateItemDialog
 
 class ItemTableView(QTableView):
     def __init__(self, header, groupView, tagView, parent=None):
@@ -33,8 +32,8 @@ class ItemTableView(QTableView):
         self.setModel(model)
 
         # delegate
-        # delegate = TagDelegate(self)
-        # self.setItemDelegate(delegate)
+        delegate = ItemDelegate(self)
+        self.setItemDelegate(delegate)
 
         # context menu
         self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -44,6 +43,14 @@ class ItemTableView(QTableView):
         '''reset tag table with specified model data'''
         self.model().setup(data)
         self.reset()
+
+    def tags(self):
+        '''get all tags data from tags table view'''
+        return self.tagView.model().serialize(save=False)
+
+    def rootGroup(self):
+        '''get all groups in hierachical structure as defined in group class'''
+        return self.groupView.model().serialize(save=False)
 
     def setupCascadeMenu(self, menu, config, keys=[]):
         '''create cascade menu according to specified groups
@@ -82,7 +89,7 @@ class ItemTableView(QTableView):
         menu.addAction(self.tr("Edit"), self.slot_editRow)
 
         move = QMenu(self.tr('Move'))
-        groups = self.groupView.model().serialize(save=False).get('children', [])
+        groups = self.rootGroup().get('children', [])
         self.setupCascadeMenu(move, groups, [key, 2, 3]) # 2->UNREFERENCED, 3->ALL GROUP
         menu.addMenu(move)        
 
@@ -155,68 +162,3 @@ class ItemTableView(QTableView):
             if key in keys:
                 keys.pop(keys.index(key))
                 model.setData(index, keys)
-
-
-class CreateItemDialog(QDialog):
-    def __init__(self, parent=None):
-        super(CreateItemDialog, self).__init__(parent)
-
-        # labels
-        fileLabel = QLabel("Referenced object")
-        nameLabel = QLabel("Description name")
-
-        # line edit
-        self.refEdit = QLineEdit()
-        self.nameEdit = QLineEdit()
-
-        # radio buttons
-        self.radio1 = QRadioButton("Directory")
-        self.radio2 = QRadioButton("File")
-        self.radio1.setChecked(True)
-
-        hbox = QHBoxLayout()
-        hbox.addWidget(self.radio1)
-        hbox.addWidget(self.radio2)
-
-        groupBox = QGroupBox("Referenced type")
-        groupBox.setLayout(hbox)
-
-        # buttons
-        browseButton = QPushButton("&Browse...")
-        browseButton.clicked.connect(self.browse)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-
-        # set layout
-        mainLayout = QGridLayout()
-        mainLayout.addWidget(fileLabel, 0, 0)
-        mainLayout.addWidget(self.refEdit, 0, 1)
-        mainLayout.addWidget(browseButton, 0, 2)
-        mainLayout.addWidget(nameLabel, 1, 0)
-        mainLayout.addWidget(self.nameEdit, 1, 1, 1, 2)
-        mainLayout.addWidget(groupBox, 2, 0, 1, 3)
-        mainLayout.addWidget(buttons, 3, 2)        
-        self.setLayout(mainLayout)
-
-        self.setWindowTitle("Create Item")
-
-    def browse(self):
-        if self.radio1.isChecked():
-            path = QFileDialog.getExistingDirectory(self, "Select directory...")
-        else:
-            path, _ = QFileDialog.getOpenFileName(self, "Select file...")
-        if path:            
-            self.refEdit.setText(path)
-            if not self.nameEdit.text():
-                self.nameEdit.setText(os.path.basename(path))
-
-    def accept(self):
-        if not self.refEdit.text() or not self.nameEdit.text():
-            QMessageBox.warning(self, 'Warning', 'Name and referenced object are required.')
-        else:
-            super(CreateItemDialog, self).accept()
-
-    def values(self):
-        return self.refEdit.text(), self.nameEdit.text()
