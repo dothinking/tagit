@@ -2,7 +2,7 @@
 # insert, remove, edit color
 # 
 
-from PyQt5.QtCore import QItemSelectionModel, Qt
+from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
 from PyQt5.QtGui import QColor
 
@@ -10,6 +10,9 @@ from models.TagModel import TagModel, TagDelegate
 
 
 class TagTableView(QTableView):
+
+    tagRemoved = pyqtSignal(int)
+
     def __init__(self, header, parent=None):
         super(TagTableView, self).__init__(parent)
 
@@ -97,29 +100,18 @@ class TagTableView(QTableView):
     def slot_removeRow(self):
         '''delete selected item'''
         index = self.selectionModel().currentIndex()
+
         reply = QMessageBox.question(self, 'Confirm', self.tr(
             "Confirm to remove '{0}'?\n"
-            "Items with this TAG will not be deleted.".format(index.data())), QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            "Items with this TAG will not be deleted.".format(index.data())), 
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
         if reply != QMessageBox.Yes:
             return
         
         model = self.model()
+        key = model.index(index.row(), 0).data()
         if not model.isDefaultItem(index): 
             model.removeRow(index.row(), index.parent())
-
-
-
-
-if __name__ == '__main__':
-    import sys
-    from PyQt5.QtWidgets import QApplication
-
-    config = [[1,'No Tag', '#0000ff'], [2, 'Python', '#ff0000'], [3, 'Java', '#00ff00']]
-
-    app = QApplication(sys.argv)
-    
-    tag = TagTableView(['Tag', 'Color'])
-    tag.setup(config,2)
-    tag.show()
-
-    sys.exit(app.exec_())  
+            # emit removing group signal            
+            self.tagRemoved.emit(key)

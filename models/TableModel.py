@@ -38,8 +38,9 @@ class TableModel(QAbstractTableModel):
     def saveRequired(self):
         return self._saveRequired
 
-    def serialize(self):
-        self._saveRequired = False # saved
+    def serialize(self, save=True):
+        if save:
+            self._saveRequired = False # saved
         return [item for item in self.dataList]
 
     

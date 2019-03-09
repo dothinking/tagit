@@ -70,7 +70,8 @@ class MainWindow(QMainWindow):
         '''
         default_groups = [
             {'key':1, 'name':'Ungrouped'},
-            {'key':2, 'name':'All Groups'},
+            {'key':2, 'name':'Unreferenced'},
+            {'key':3, 'name':'All Groups'},
         ]
         default_tags = [[-1, 'Untagged', '#000000']]        
 
@@ -109,14 +110,13 @@ class MainWindow(QMainWindow):
 
         # init tags table view
         tags = data.get(self.key_tag, default_tags)
-        key = data.get(self.key_setting, {}).get('selected_tag', 1)
+        key = data.get(self.key_setting, {}).get('selected_tag', -1)
         self.tagsTableView.setup(tags, key)
         self.tagsTableView.setColumnHidden(0, True) # hide first column -> key
 
         # init items table view
-        default_items = [['xxx',1,[2,3],'xxxxx','2019-03-07','comments'],['xxxxxx',3,'[2,3]','xxxxx','2019-03-07','comments']]
-        items = data.get(self.key_item, default_items)
-        self.itemsTableView.setup(items, groups)
+        items = data.get(self.key_item, [])
+        self.itemsTableView.setup(items)
         # self.itemsTableView.setColumnHidden(1, True)
         # self.itemsTableView.setColumnHidden(3, True)
         # self.itemsTableView.setColumnHidden(5, True)
@@ -186,7 +186,8 @@ class MainWindow(QMainWindow):
         # separate widgets        
         self.groupsTreeView = GroupTreeView(['GROUP']) # groups tree view        
         self.tagsTableView = TagTableView(['key', 'Tag', 'Color']) # tags table view
-        self.itemsTableView = ItemTableView(['Title', 'Group', 'Tags', 'Path', 'Date', 'Notes']) # main table widget: to do
+        headers = ['Title', 'Group', 'Tags', 'Path', 'Date', 'Notes']
+        self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView) # main table widget
 
         # arranged views
         self.tabWidget = QTabWidget()

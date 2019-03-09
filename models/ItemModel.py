@@ -23,21 +23,6 @@ class ItemModel(TableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-    def data(self, index, role=Qt.DisplayRole):
-        '''Table view could get data from this model'''
-        if role != Qt.DisplayRole and role != Qt.EditRole:
-            return None
-
-        if not self.checkIndex(index):
-            return None
-
-        row, col = index.row(), index.column() 
-
-        if index.column() == TAGS:
-            return ','.join(self.dataList[row][col])
-               
-        return self.dataList[row][col]
  
 
 class TagDelegate(QStyledItemDelegate):

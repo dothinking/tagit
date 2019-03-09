@@ -10,7 +10,8 @@ from PyQt5.QtWidgets import (QHeaderView, QTableView, QMenu, QAction,
     QDialog, QFileDialog, QMessageBox, QDialogButtonBox, QPushButton,
     QLabel, QHBoxLayout, QGridLayout, QLineEdit, QGroupBox, QRadioButton)
 
-from models.ItemModel import ItemModel, TagDelegate
+from models.ItemModel import (ItemModel, TagDelegate,
+    NAME, GROUP, TAGS, PATH, DATE, NOTES)
 
 
 class ItemTableView(QTableView):
@@ -73,8 +74,8 @@ class ItemTableView(QTableView):
             return
 
         # current group id
-        index = self.model().index(rows[0].row(), 1) # GROUP
-        key = self.model().data(index)
+        index = self.model().index(rows[0].row(), GROUP)
+        key = index.data()
 
         # init context menu        
         menu = QMenu()
@@ -107,11 +108,11 @@ class ItemTableView(QTableView):
                     model.setData(index, data)
 
     def slot_moveRows(self):
-        '''inset item at the same level with current selected item'''
+        '''move selected items to specified group'''
         key = self.sender().key
         rows = self.selectionModel().selectedRows()
         for row in rows:
-            index = self.model().index(row.row(), 1) # GROUP
+            index = self.model().index(row.row(), GROUP)
             self.model().setData(index, key)
 
     def slot_editRow(self):
@@ -141,12 +142,19 @@ class ItemTableView(QTableView):
         '''move all items with specified groups list to ungrouped'''
         model = self.model()
         for i in range(model.rowCount()):
-            index = model.index(i, 1)
+            index = model.index(i, GROUP)
             if index.data() in keys:
-                model.setData(index, 1)
+                model.setData(index, 1) # 1->Ungrouped
 
     def slot_untagItems(self, key):
-        print(key)
+        '''remove specified tag from tags list of each item'''
+        model = self.model()
+        for i in range(model.rowCount()):
+            index = model.index(i, TAGS)
+            keys = index.data()
+            if key in keys:
+                keys.pop(keys.index(key))
+                model.setData(index, keys)
 
 
 class CreateItemDialog(QDialog):

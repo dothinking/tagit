@@ -22,15 +22,15 @@ class TagModel(TableModel):
 
     def getIndexByKey(self, key):
         '''get ModelIndex with specified key in the associated object'''
-        for i, (tag_key, *_) in enumerate(self.data):
+        for i, (tag_key, *_) in enumerate(self.dataList):
             if tag_key == key:
                 return self.index(i, NAME)
         return QModelIndex()
 
     def getKeyByIndex(self, index):
         row = index.row()
-        if 0<=row<len(self.data):
-            return self.data[row][0]
+        if 0<=row<len(self.dataList):
+            return self.dataList[row][0]
         else:
             return -1
  
@@ -44,7 +44,7 @@ class TagModel(TableModel):
                 self._currentKey = key
 
         self.beginResetModel()
-        self.data = items        
+        self.dataList = items        
         self.endResetModel()
 
     def nextKey(self):
@@ -61,7 +61,7 @@ class TagModel(TableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        if index.column() != NAME:
+        if index.row()==0 or index.column() != NAME:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
