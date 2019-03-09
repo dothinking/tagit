@@ -14,8 +14,11 @@ from models.ItemModel import ItemModel, TagDelegate
 
 
 class ItemTableView(QTableView):
-    def __init__(self, header, parent=None):
+    def __init__(self, header, groupView, tagView, parent=None):
         super(ItemTableView, self).__init__(parent)
+
+        self.groupView = groupView
+        self.tagView = tagView
 
         # table style
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -36,10 +39,8 @@ class ItemTableView(QTableView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
 
-    def setup(self, data=[], groups=[]):
+    def setup(self, data=[]):
         '''reset tag table with specified model data'''
-        self.groups = groups
-
         self.model().setup(data)
         self.reset()
 
@@ -80,7 +81,8 @@ class ItemTableView(QTableView):
         menu.addAction(self.tr("Edit"), self.slot_editRow)
 
         move = QMenu(self.tr('Move'))
-        self.setupCascadeMenu(move, self.groups, [key, 2]) # 2-> ALL GROUP
+        groups = self.groupView.model().serialize(save=False).get('children', [])
+        self.setupCascadeMenu(move, groups, [key, 2, 3]) # 2->UNREFERENCED, 3->ALL GROUP
         menu.addMenu(move)        
 
         menu.addSeparator()
@@ -134,6 +136,17 @@ class ItemTableView(QTableView):
         model = self.model()
         for index in index_list:
             model.removeRow(index.row())  
+
+    def slot_ungroupItems(self, keys):
+        '''move all items with specified groups list to ungrouped'''
+        model = self.model()
+        for i in range(model.rowCount()):
+            index = model.index(i, 1)
+            if index.data() in keys:
+                model.setData(index, 1)
+
+    def slot_untagItems(self, key):
+        print(key)
 
 
 class CreateItemDialog(QDialog):

@@ -2,12 +2,15 @@
 # append, insert child, remove, edit text
 # 
 
-from PyQt5.QtCore import (QItemSelectionModel, Qt)
+from PyQt5.QtCore import (QItemSelectionModel, Qt, pyqtSignal)
 from PyQt5.QtWidgets import (QTreeView, QMenu, QAction, QMessageBox)
 
 from models.GroupModel import GroupModel
 
 class GroupTreeView(QTreeView):
+
+    groupRemoved = pyqtSignal(list)
+
     def __init__(self, header, parent=None):
         ''':param headers: header of tree, e.g. ('name', 'value')
         '''
@@ -93,26 +96,21 @@ class GroupTreeView(QTreeView):
     def slot_removeRow(self):
         '''delete selected item'''
         index = self.selectionModel().currentIndex()
+
         reply = QMessageBox.question(self, 'Confirm', self.tr(
             "Confirm to remove '{0}'?\n"
-            "The items under this group will not be deleted.".format(index.data())), QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            "The items under this group will not be deleted,"
+            " but moved to Ungrouped.".format(index.data())), 
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
         if reply != QMessageBox.Yes:
             return
         
         model = self.model()
+        
+        # ATTENTION: get the key before any actions are applied to the tree model
+        keys = index.internalPointer().keys()
         if not model.isDefaultItem(index): 
             model.removeRow(index.row(), index.parent())
-
-
-
-if __name__ == '__main__':
-
-    import sys
-    from PyQt5.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    config = {'key': 0, 'name': 'Group', 'children': [{'key': 18, 'name': '[New Group1]', 'children': [{'key': 19, 'name': '[Sub Group2]'}]}, {'key': 12, 'name': '[New Group3]', 'children': [{'key': 13, 'name': '[Sub Group4]', 'children': [{'key': 14, 'name': '[Sub Group5]', 'children': [{'key': 15, 'name': '[Sub Group6]'}]}, {'key': 16, 'name': '[New Group7]'}]}]}]}
-    tree = GroupTreeView(['GROUP'])
-    tree.setup(config.get('children', []),12)
-    tree.show()
-    sys.exit(app.exec_())   
+            # emit removing group signal
+            self.groupRemoved.emit(keys)

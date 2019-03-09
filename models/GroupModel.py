@@ -20,7 +20,15 @@ class GroupItem(TreeItem):
         self._key = key
 
     def key(self):
+        '''key of current item'''
         return self._key
+
+    def keys(self):
+        '''all keys including children'''
+        groups = [self._key]
+        for item in self.childItems:
+            groups.extend(item.keys())
+        return groups
 
     def insertChildren(self, position, key, count, columns):
         '''insert children with specified columns at sprcified position
@@ -126,8 +134,8 @@ class GroupModel(TreeModel):
         return self._currentKey
 
     def isDefaultItem(self, index):
-        '''first two items under root is default item'''
-        return not index.parent().isValid() and index.row()<2
+        '''default item: 0<key<10'''
+        return not index.parent().isValid() and self._getItem(index).key()<10
 
     def saveRequired(self):
         return self._saveRequired
@@ -146,10 +154,10 @@ class GroupModel(TreeModel):
 
         return QModelIndex()
 
-
-    def serialize(self):
+    def serialize(self, save=True):
         '''store raw data'''
-        self._saveRequired = False # saved
+        if save:
+            self._saveRequired = False # saved
         return self.rootItem.serialize()
 
     # --------------------------------------------------------------

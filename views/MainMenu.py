@@ -53,6 +53,12 @@ class MainMenu(object):
         self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.refreshMenus)
         QApplication.instance().focusChanged.connect(self.refreshMenus)
 
+        # group vs items
+        self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
+
+        # tag vs item
+        self.mainWindow.tagsView().tagRemoved.connect(self.mainWindow.itemsView().slot_untagItems)
+
     def createMenus(self, parent=None, config=None):
         '''init menu
            :param config: data for creating menus, e.g.
