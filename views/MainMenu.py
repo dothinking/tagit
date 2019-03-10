@@ -53,11 +53,16 @@ class MainMenu(object):
         self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.refreshMenus)
         QApplication.instance().focusChanged.connect(self.refreshMenus)
 
-        # group vs items
-        self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
+        # filter items
+        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.mainWindow.itemsView().slot_filterByGroup)
+        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.mainWindow.itemsView().slot_filterByTag)
+        self.mainWindow.tabWidget.currentChanged.connect(self.refreshItems)
 
-        # tag vs item
+        # edit items triggered by removing group or tag
+        self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
         self.mainWindow.tagsView().tagRemoved.connect(self.mainWindow.itemsView().slot_untagItems)
+        
+
 
     def createMenus(self, parent=None, config=None):
         '''init menu
@@ -149,6 +154,12 @@ class MainMenu(object):
         if checkable:
             action.setCheckable(True)
         return action
+
+    def refreshItems(self, index):
+        if index==0:
+            self.mainWindow.itemsView().slot_filterByGroup()
+        else:
+            self.mainWindow.itemsView().slot_filterByTag()
 
     def new(self):
         if self.maybeSave():

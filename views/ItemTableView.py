@@ -8,7 +8,7 @@ import time
 from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex
 from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction
 
-from models.ItemModel import (ItemModel, ItemDelegate,
+from models.ItemModel import (ItemModel, ItemDelegate, SortFilterProxyModel,
     NAME, GROUP, TAGS, PATH, DATE, NOTES)
 
 from views.CreateItemDialog import CreateItemDialog
@@ -25,11 +25,18 @@ class ItemTableView(QTableView):
         self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
         self.setSelectionBehavior(QTableView.SelectRows)
         self.setAlternatingRowColors(True)
+        self.setSortingEnabled(True)
+        self.sortByColumn(NAME, Qt.AscendingOrder)
         # self.resizeColumnsToContents()
 
-        # model
-        model = ItemModel(header)
-        self.setModel(model)
+        # source model
+        self.sourceModel = ItemModel(header)
+
+        # proxy model
+        self.proxyModel = SortFilterProxyModel()
+        self.proxyModel.setDynamicSortFilter(True)
+        self.proxyModel.setSourceModel(self.sourceModel)
+        self.setModel(self.proxyModel)
 
         # delegate
         delegate = ItemDelegate(self)
@@ -41,8 +48,9 @@ class ItemTableView(QTableView):
 
     def setup(self, data=[]):
         '''reset tag table with specified model data'''
-        self.model().setup(data)
+        self.sourceModel.setup(data)
         self.reset()
+        self.slot_filterByGroup()
 
     def tags(self):
         '''get all tags data from tags table view'''
@@ -81,7 +89,7 @@ class ItemTableView(QTableView):
             return
 
         # current group id
-        index = self.model().index(rows[0].row(), GROUP)
+        index = self.sourceModel.index(rows[0].row(), GROUP)
         key = index.data()
 
         # init context menu        
@@ -103,24 +111,23 @@ class ItemTableView(QTableView):
         dlg = CreateItemDialog()
         if dlg.exec_():
             # insert row at the end of table
-            model = self.model()
-            num_row = model.rowCount()
-            if model.insertRow(num_row):
+            num_row = self.sourceModel.rowCount()
+            if self.sourceModel.insertRow(num_row):
                 path, name = dlg.values()
                 c_time = time.strftime('%Y-%m-%d',time.localtime(time.time()))
                 # set row values
                 row_data = [name, 1, [], path, c_time, '']
                 for i, data in enumerate(row_data):
-                    index = model.index(num_row, i)
-                    model.setData(index, data)
+                    index = self.sourceModel.index(num_row, i)
+                    self.sourceModel.setData(index, data)
 
     def slot_moveRows(self):
         '''move selected items to specified group'''
         key = self.sender().key
         rows = self.selectionModel().selectedRows()
         for row in rows:
-            index = self.model().index(row.row(), GROUP)
-            self.model().setData(index, key)
+            index = self.sourceModel.index(row.row(), GROUP)
+            self.sourceModel.setData(index, key)
 
     def slot_editRow(self):
         '''inset item at the same level with current selected item'''
@@ -141,24 +148,47 @@ class ItemTableView(QTableView):
             index = QPersistentModelIndex(model_index)
             index_list.append(index)
 
-        model = self.model()
         for index in index_list:
-            model.removeRow(index.row())  
+            self.sourceModel.removeRow(index.row())  
 
     def slot_ungroupItems(self, keys):
         '''move all items with specified groups list to ungrouped'''
-        model = self.model()
-        for i in range(model.rowCount()):
-            index = model.index(i, GROUP)
+        for i in range(self.sourceModel.rowCount()):
+            index = self.sourceModel.index(i, GROUP)
             if index.data() in keys:
-                model.setData(index, 1) # 1->Ungrouped
+                self.sourceModel.setData(index, 1) # 1->Ungrouped
 
     def slot_untagItems(self, key):
         '''remove specified tag from tags list of each item'''
-        model = self.model()
-        for i in range(model.rowCount()):
-            index = model.index(i, TAGS)
+        for i in range(self.sourceModel.rowCount()):
+            index = self.sourceModel.index(i, TAGS)
             keys = index.data()
             if key in keys:
                 keys.pop(keys.index(key))
-                model.setData(index, keys)
+                self.sourceModel.setData(index, keys)
+
+    def slot_filterByGroup(self):
+        '''triggered by group selection changed'''
+        # get selected group
+        indexes = self.groupView.selectionModel().selectedRows()
+        if indexes and indexes[0].isValid():
+            groups = indexes[0].internalPointer().keys()
+        else:
+            groups = None       
+
+        # set filter for column GROUP
+        self.proxyModel.setGroupFilter(groups)
+        self.proxyModel.setFilterKeyColumn(GROUP)
+
+    def slot_filterByTag(self):
+        '''triggered by tag selection changed'''
+        # get selected tag
+        indexes = self.tagView.selectionModel().selectedIndexes()
+        if indexes and indexes[0].isValid():
+            tag = self.tagView.model().index(indexes[0].row(), 0).data()
+        else:
+            tag = None       
+
+        # set filter for column GROUP
+        self.proxyModel.setTagFilter(tag)
+        self.proxyModel.setFilterKeyColumn(TAGS)

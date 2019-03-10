@@ -6,7 +6,7 @@ from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
 from PyQt5.QtGui import QColor
 
-from models.TagModel import TagModel, TagDelegate
+from models.TagModel import TagModel, TagDelegate, KEY, NAME, COLOR
 
 
 class TagTableView(QTableView):
@@ -26,8 +26,8 @@ class TagTableView(QTableView):
         self.verticalHeader().hide()
 
         # model
-        model = TagModel(header)
-        self.setModel(model)
+        self.sourceModel = TagModel(header)
+        self.setModel(self.sourceModel)
 
         # delegate
         delegate = TagDelegate(self)
@@ -42,13 +42,13 @@ class TagTableView(QTableView):
         '''reset tag table with specified model data,
            and set the row with specified key as selected
         '''
-        self.model().setup(data)
+        self.sourceModel.setup(data)
         self.reset()
         # set selected item
-        index = self.model().getIndexByKey(selected_key)        
+        index = self.sourceModel.getIndexByKey(selected_key)        
         if index.isValid():
-            # self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
-            self.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect)
+            self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+            # self.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect)
 
     def customContextMenu(self, position):
         '''show context menu'''
@@ -63,8 +63,7 @@ class TagTableView(QTableView):
         act_rv = menu.addAction(self.tr("Remove Tag"), self.slot_removeRow)
 
         # set status
-        model = self.model()
-        s = not model.isDefaultItem(indexes[0])
+        s = not self.sourceModel.isDefaultItem(indexes[0])
         act_rv.setEnabled(s)
 
         menu.exec_(self.viewport().mapToGlobal(position))
@@ -75,18 +74,17 @@ class TagTableView(QTableView):
     def slot_insertRow(self):
         '''inset item at the same level with current selected item'''
         index = self.selectionModel().currentIndex()
-        model = self.model()
 
         row = index.row() + 1
-        if model.insertRow(row, index.parent()):
-            child_key = model.index(row, 0, index.parent())
-            child_name = model.index(row, 1, index.parent())
-            child_color = model.index(row, 2, index.parent())
+        if self.sourceModel.insertRow(row, index.parent()):
+            child_key = self.sourceModel.index(row, KEY)
+            child_name = self.sourceModel.index(row, NAME)
+            child_color = self.sourceModel.index(row, COLOR)
 
             # set default data
-            model.setData(child_key, model.nextKey())
-            model.setData(child_name, 'New Tag')
-            model.setData(child_color, '#000000')
+            self.sourceModel.setData(child_key, self.sourceModel.nextKey())
+            self.sourceModel.setData(child_name, 'New Tag')
+            self.sourceModel.setData(child_color, '#000000')
             self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
 
             # enter editing status and quit when finished
@@ -109,9 +107,8 @@ class TagTableView(QTableView):
         if reply != QMessageBox.Yes:
             return
         
-        model = self.model()
-        key = model.index(index.row(), 0).data()
-        if not model.isDefaultItem(index): 
-            model.removeRow(index.row(), index.parent())
+        key = self.sourceModel.index(index.row(), KEY).data()
+        if not self.sourceModel.isDefaultItem(index): 
+            self.sourceModel.removeRow(index.row())
             # emit removing group signal            
             self.tagRemoved.emit(key)

@@ -1,12 +1,14 @@
 # model, delegate for Tags table view
 # 
 
-from PyQt5.QtCore import QModelIndex, Qt, QRect, QEvent
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (QStyledItemDelegate, QHBoxLayout,QWidget,QStyle, QStyleOptionButton, 
-    QColorDialog, QPushButton)
+import os
 
-from .TableModel import TableModel
+from PyQt5.QtCore import QSortFilterProxyModel, QModelIndex, Qt, QRect, QEvent
+from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import (QStyledItemDelegate, QHBoxLayout, QWidget, QStyle, QComboBox, QSizePolicy,QStyleOptionButton,
+    QLabel, QPushButton)
+
+from models.TableModel import TableModel
 
 NAME, GROUP, TAGS, PATH, DATE, NOTES = range(6)
 
@@ -24,10 +26,49 @@ class ItemModel(TableModel):
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
  
-
-class TagDelegate(QStyledItemDelegate):
+class SortFilterProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
-        super(TagDelegate, self).__init__(parent)
+        super(SortFilterProxyModel, self).__init__(parent)
+        self.groupList = []
+        self.tagId = None
+
+    def setGroupFilter(self, groups):
+        self.groupList = groups
+
+    def setTagFilter(self, tag_id):
+        self.tagId = tag_id
+
+    def filterAcceptsRow(self, sourceRow, sourceParent):
+        '''filter with group and tag'''
+        if self.filterKeyColumn() == GROUP:
+            group = self.sourceModel().index(sourceRow, GROUP, sourceParent).data()
+            # Unreferenced: path is invalid
+            if not self.groupList:
+                return False
+            elif self.groupList[0]==2:
+                path = self.sourceModel().index(sourceRow, PATH, sourceParent).data()                
+                return not path or not os.path.exists(path)
+            # ALL
+            elif self.groupList[0]==3:
+                return True
+            else:
+                return group in self.groupList
+
+        elif self.filterKeyColumn() == TAGS:
+            tags = self.sourceModel().index(sourceRow, TAGS, sourceParent).data()
+            if not self.tagId:
+                return False
+            elif self.tagId==-1: # Untagged
+                return tags==[]
+            else:
+                return self.tagId in tags
+
+        # Not our business.
+        return super(SortFilterProxyModel, self).filterAcceptsRow(sourceRow, sourceParent)
+
+class ItemDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super(ItemDelegate, self).__init__(parent)
         self.ratio = 0.55 # button width=height=ration*cell_height
         self.ref_btn = QPushButton() # style reference button
 
@@ -38,42 +79,48 @@ class TagDelegate(QStyledItemDelegate):
         w = h
         x = R.left() + (R.width()-w)/2
         y = R.top() + (1-self.ratio)/2*R.height()
-        return QRect(x,y,w,h)           
+        return QRect(x,y,w,h)
 
     def paint(self, painter, option, index):
-        '''paint item in column 1 as user defined'''
-
-        # dismiss focus style        
-        if option.state & QStyle.State_HasFocus: 
-            option.state ^= QStyle.State_HasFocus
-
-        if index.column() == COLOR: # since KEY is not shown in the view
+        '''render style for tags list'''
+        if index.column() == TAGS:
             # reference button for the style of QStyleOptionButton            
-            self.ref_btn.setStyleSheet('background-color: {0}'.format(index.data()))
+            self.ref_btn.setStyleSheet('background-color: {0}'.format('#ffccaa'))
 
             # draw button
             btn = QStyleOptionButton()
+            btn.text = '='
             btn.rect = self._getButtonRect(option)
             self.ref_btn.style().drawControl(QStyle.CE_PushButton, btn, painter, self.ref_btn)
         else:
-            super(TagDelegate, self).paint(painter, option, index)
+            super(ItemDelegate, self).paint(painter, option, index)
 
-    def editorEvent(self, event, model, option, index):
-        '''it called when editing of an item starts.
-           only single click on the drawn button is allowable
-        '''
-        if index.column() == COLOR:
-            if self._getButtonRect(option).contains(event.pos()) and event.button() == Qt.LeftButton:
-                self.setModelData(None, model, index)
-            return True
+    def createEditor(self, parent, option, index):
+        if index.column() == TAGS:
+            editor = QComboBox(parent)
+            editor.setEditable(True)
+            tags = self.parent().tags()
+            for tag in tags:
+                editor.addItem(tag[1], tag) # KEY, NAME, COLOR
+            editor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            return editor
         else:
-            return super(TagDelegate, self).editorEvent(event, model, option, index)
+            return QStyledItemDelegate().createEditor(parent, option, index)
+
+    # def setEditorData(self, editor, index):
+    #     value = index.model().data(index, Qt.EditRole)
+
+    #     editor.setValue(value)
 
     def setModelData(self, editor, model, index):
         '''set model data after editing'''        
-        if index.column() == COLOR:
-            color = QColorDialog.getColor(QColor(index.data()))
-            if color.isValid():
-                model.setData(index, color.name())
+        if index.column() == TAGS:
+            tag = editor.currentData()
+            keys = index.data()
+            if tag[0] not in keys:
+                keys.append(tag[0])
+                model.setData(index, keys)
         else:
-            super(TagDelegate, self).setModelData(editor, model, index)
+            super(ItemDelegate, self).setModelData(editor, model, index)
+
+    

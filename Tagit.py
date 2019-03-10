@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
         return (
             self.groupsTreeView.model().saveRequired() 
             or self.tagsTableView.model().saveRequired()
-            or self.itemsTableView.model().saveRequired()
+            or self.itemsTableView.model().sourceModel().saveRequired()
             )
 
     def serialize(self, filename):
@@ -157,7 +157,7 @@ class MainWindow(QMainWindow):
             self.app_name   : self.app_version,
             self.key_group  : self.groupsTreeView.model().serialize(),
             self.key_tag    : self.tagsTableView.model().serialize(),
-            self.key_item   : self.itemsTableView.model().serialize(),
+            self.key_item   : self.itemsTableView.model().sourceModel().serialize(),
             self.key_setting: {'selected_group': selected_group,
                 'selected_tag': selected_tag},
         }

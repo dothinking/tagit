@@ -87,7 +87,7 @@ class GroupTreeView(QTreeView):
         model = self.model()
 
         # could not prepend item to default items
-        row = 2 if model.isDefaultItem(index) else index.row() + 1
+        row = 3 if model.isDefaultItem(index) else index.row() + 1
         if model.insertRow(row, index.parent()):
             child = model.index(row, 0, index.parent())
             model.setData(child, "[New Group]")
