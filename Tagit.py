@@ -117,9 +117,9 @@ class MainWindow(QMainWindow):
         # init items table view
         items = data.get(self.key_item, [])
         self.itemsTableView.setup(items)
-        # self.itemsTableView.setColumnHidden(1, True)
-        # self.itemsTableView.setColumnHidden(3, True)
-        # self.itemsTableView.setColumnHidden(5, True)
+        self.itemsTableView.setColumnHidden(1, True)
+        self.itemsTableView.setColumnHidden(3, True)
+        self.itemsTableView.setColumnHidden(5, True)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
