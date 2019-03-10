@@ -5,8 +5,9 @@
 import os
 import time
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex
-from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction
+from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex, QModelIndex
+from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction, QMessageBox
+from PyQt5.QtGui import QPixmap, QIcon, QColor
 
 from models.ItemModel import (ItemModel, ItemDelegate, SortFilterProxyModel,
     NAME, GROUP, TAGS, PATH, DATE, NOTES)
@@ -27,6 +28,7 @@ class ItemTableView(QTableView):
         self.setAlternatingRowColors(True)
         self.setSortingEnabled(True)
         self.sortByColumn(NAME, Qt.AscendingOrder)
+        self.verticalHeader().hide()
         # self.resizeColumnsToContents()
 
         # source model
@@ -60,7 +62,7 @@ class ItemTableView(QTableView):
         '''get all groups in hierachical structure as defined in group class'''
         return self.groupView.model().serialize(save=False)
 
-    def setupCascadeMenu(self, menu, config, keys=[]):
+    def setupCascadeGroupMenu(self, menu, config, keys=[]):
         '''create cascade menu according to specified groups
            :param menu: parent menu
            :param config: groups data for menu items
@@ -74,40 +76,87 @@ class ItemTableView(QTableView):
 
             # create menu action, but skip current group
             if key not in keys:                
-                action = menu.addAction(name, self.slot_moveRows)
+                action = menu.addAction(name, self.slot_moveGroup)
                 action.key = key
 
             # create menu if children items exist
             if children:
                 sub_menu = menu.addMenu('{0}...'.format(name))
-                self.setupCascadeMenu(sub_menu, children, keys)
+                self.setupCascadeGroupMenu(sub_menu, children, keys)
+
+    def setupTagsMenu(self, menu, addTagMenu, delTagMenu, currentTags):
+        '''attach oe detach tags for current item'''        
+        for tag in self.tags():
+            # UNTAGGED
+            if tag[0]<0:
+                continue
+
+            # set icon with bg-color same as tag
+            pixmap = QPixmap(16, 16)
+            pixmap.fill(QColor(tag[2]))
+
+            # tags not attached yet -> to be attached
+            if tag[0] not in currentTags:
+                action = addTagMenu.addAction(QIcon(pixmap), self.tr(tag[1]), self.slot_attachTag)
+            # current tags -> to be removed
+            else:
+                action = delTagMenu.addAction(QIcon(pixmap), self.tr(tag[1]), self.slot_removeTag)
+
+            # set tag key for slot
+            action.key = tag[0]
+
+        if addTagMenu.actions():
+            menu.addMenu(addTagMenu)
+
+        if delTagMenu.actions():
+            menu.addMenu(delTagMenu)
 
     def customContextMenu(self, position):
         '''show context menu'''
-        rows = self.selectionModel().selectedRows()
-        if not len(rows):
+        indexes = self.selectionModel().selectedRows(GROUP)
+        if not indexes:
             return
 
-        # current group id
-        index = self.sourceModel.index(rows[0].row(), GROUP)
-        key = index.data()
+        # group of current item
+        gid = indexes[0].data()
 
-        # init context menu        
+        # tags of current item
+        tids = self.selectionModel().selectedRows(TAGS)[0].data()
+
+        # menus on items
         menu = QMenu()
-        menu.addAction(self.tr("Edit"), self.slot_editRow)
+        menu.addAction(self.tr("New Item"), self.slot_appendRow)
+        menu.addAction(self.tr("Edit Item"), self.slot_editRow)
+        menu.addAction(self.tr("Remove Item"), self.slot_removeRows)        
 
-        move = QMenu(self.tr('Move'))
-        groups = self.rootGroup().get('children', [])
-        self.setupCascadeMenu(move, groups, [key, 2, 3]) # 2->UNREFERENCED, 3->ALL GROUP
-        menu.addMenu(move)        
-
+        # menus on groups
         menu.addSeparator()
-        menu.addAction(self.tr("Remove"), self.slot_removeRows)
+        move = QMenu(self.tr('Move to Group'))
+        groups = self.rootGroup().get('children', [])
+        
+        self.setupCascadeGroupMenu(move, groups, [gid, 2, 3]) # 2->UNREFERENCED, 3->ALL GROUP
+        menu.addMenu(move)
+
+        # menus on tags
+        menu.addSeparator()
+        addTag = QMenu(self.tr("Attach Tags"))
+        delTag = QMenu(self.tr("Remove Tags"))
+        self.setupTagsMenu(menu, addTag, delTag, tids)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
     def slot_appendRow(self):
         '''inset items'''
+        # current gruop
+        indexes = self.groupView.selectionModel().selectedRows()
+        group = 1 # UNGROUP
+        if indexes and indexes[0].isValid():
+            group = indexes[0].internalPointer().key()
+        # set default group as UNGROUP, though current group is UNREFERENCED(2) or ALL GROUPS(3)
+        if group in [2,3]:
+            group = 1
+
+        # add item
         dlg = CreateItemDialog()
         if dlg.exec_():
             # insert row at the end of table
@@ -116,21 +165,13 @@ class ItemTableView(QTableView):
                 path, name = dlg.values()
                 c_time = time.strftime('%Y-%m-%d',time.localtime(time.time()))
                 # set row values
-                row_data = [name, 1, [], path, c_time, '']
+                row_data = [name, group, [], path, c_time, '']
                 for i, data in enumerate(row_data):
                     index = self.sourceModel.index(num_row, i)
                     self.sourceModel.setData(index, data)
 
-    def slot_moveRows(self):
-        '''move selected items to specified group'''
-        key = self.sender().key
-        rows = self.selectionModel().selectedRows()
-        for row in rows:
-            index = self.sourceModel.index(row.row(), GROUP)
-            self.sourceModel.setData(index, key)
-
     def slot_editRow(self):
-        '''inset item at the same level with current selected item'''
+        '''edit item'''
         pass
 
     def slot_removeRows(self):
@@ -144,12 +185,43 @@ class ItemTableView(QTableView):
             return
 
         index_list = []
-        for model_index in rows:
-            index = QPersistentModelIndex(model_index)
+        for proxy_index in rows: # proxy index
+            source_index = self.proxyModel.mapToSource(proxy_index)
+            index = QPersistentModelIndex(source_index)
             index_list.append(index)
 
         for index in index_list:
             self.sourceModel.removeRow(index.row())  
+
+    def slot_moveGroup(self):
+        '''move selected items to specified group'''
+        key = self.sender().key
+        indexes = self.selectionModel().selectedRows(GROUP)
+        # ATTENTION: performing the moving action in descent order,
+        # try not to destroy the default index of the model.
+        # otherwise, multi-items could not be moved correctly.
+        for index in indexes[::-1]:
+            self.proxyModel.setData(index, key)
+
+    def slot_attachTag(self):
+        '''add tag to current item'''
+        key = self.sender().key
+        indexes = self.selectionModel().selectedRows(TAGS)
+        for index in indexes[::-1]: # ATTENTION
+            keys = index.data()
+            if key not in keys:
+                keys.append(key)
+                self.proxyModel.setData(index, keys)
+
+    def slot_removeTag(self):
+        '''delete tag from current item'''
+        key = self.sender().key
+        indexes = self.selectionModel().selectedRows(TAGS)
+        for index in indexes[::-1]: # ATTENTION
+            keys = index.data()
+            if key in keys:
+                keys.pop(keys.index(key))
+                self.proxyModel.setData(index, keys)
 
     def slot_ungroupItems(self, keys):
         '''move all items with specified groups list to ungrouped'''
