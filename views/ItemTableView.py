@@ -5,7 +5,7 @@
 import os
 import time
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex, QModelIndex
+from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex, QModelIndex, pyqtSignal
 from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction, QMessageBox
 from PyQt5.QtGui import QPixmap, QIcon, QColor
 
@@ -15,6 +15,9 @@ from models.ItemModel import (ItemModel, ItemDelegate, SortFilterProxyModel,
 from views.CreateItemDialog import CreateItemDialog
 
 class ItemTableView(QTableView):
+
+    itemsChanged = pyqtSignal(list)
+
     def __init__(self, header, groupView, tagView, parent=None):
         super(ItemTableView, self).__init__(parent)
 
@@ -47,6 +50,12 @@ class ItemTableView(QTableView):
         # context menu
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
+
+        # update group/tag counter when items are changed
+        # emit signal to request updating group counter
+        self.sourceModel.dataChanged.connect(
+            lambda: self.itemsChanged.emit(self.sourceModel.serialize(save=False))
+            )
 
     def setup(self, data=[]):
         '''reset tag table with specified model data'''
@@ -191,7 +200,11 @@ class ItemTableView(QTableView):
             index_list.append(index)
 
         for index in index_list:
-            self.sourceModel.removeRow(index.row())  
+            self.sourceModel.removeRow(index.row())
+
+        # emit signal to request updating group/tag counter
+        if index_list:
+            self.itemsChanged.emit(self.sourceModel.serialize(save=False))
 
     def slot_moveGroup(self):
         '''move selected items to specified group'''
@@ -228,7 +241,7 @@ class ItemTableView(QTableView):
         for i in range(self.sourceModel.rowCount()):
             index = self.sourceModel.index(i, GROUP)
             if index.data() in keys:
-                self.sourceModel.setData(index, 1) # 1->Ungrouped
+                self.sourceModel.setData(index, 1) # 1->Ungrouped        
 
     def slot_untagItems(self, key):
         '''remove specified tag from tags list of each item'''
@@ -237,7 +250,7 @@ class ItemTableView(QTableView):
             keys = index.data()
             if key in keys:
                 keys.pop(keys.index(key))
-                self.sourceModel.setData(index, keys)
+                self.sourceModel.setData(index, keys)        
 
     def slot_filterByGroup(self):
         '''triggered by group selection changed'''

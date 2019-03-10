@@ -112,3 +112,9 @@ class TagTableView(QTableView):
             self.sourceModel.removeRow(index.row())
             # emit removing group signal            
             self.tagRemoved.emit(key)
+
+    def slot_updateCounter(self, items):
+        '''update count of items for each group
+           :param items: the latest items list
+        '''
+        self.sourceModel.updateItems(items)

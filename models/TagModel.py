@@ -19,6 +19,9 @@ class TagModel(TableModel):
         # so common item starts from key=1
         self._currentKey = 0
 
+        # item count for each group
+        self.itemsList = []
+
 
     def getIndexByKey(self, key):
         '''get ModelIndex with specified key in the associated object'''
@@ -34,18 +37,22 @@ class TagModel(TableModel):
         else:
             return -1
  
-    def setup(self, items=[]):
+    def setup(self, tags=[]):
         '''setup model data:
            it is convenient to reset data after the model is created
         '''
         self._currentKey = 0
-        for key, name, color in items:
+        for key, name, color in tags:
             if self._currentKey<key:
                 self._currentKey = key
 
         self.beginResetModel()
-        self.dataList = items        
+        self.dataList = tags        
         self.endResetModel()
+
+    def updateItems(self, items):
+        '''items for counting'''
+        self.itemsList = items
 
     def nextKey(self):
         '''next key for new item of this model'''
@@ -65,7 +72,38 @@ class TagModel(TableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
- 
+
+    def data(self, index, role=Qt.DisplayRole):
+        '''Table view could get data from this model'''
+        if not self.checkIndex(index):
+            return None
+
+        row, col = index.row(), index.column()
+        # display
+        if role == Qt.DisplayRole:
+            if col == 1: # NAME
+                key = self.dataList[row][0] # KEY, NAME, COLOR
+                name = self.dataList[row][1]
+                count = 0
+                # UNTAGGED: check empty tags list from items
+                if key==-1:
+                    for item in self.itemsList:
+                        if not item[2]:
+                            count += 1
+                # common tag
+                else:
+                    for item in self.itemsList:
+                        if key in item[2]: # 2=>TAGS
+                            count += 1
+                return '{0} ({1})'.format(name, count) if count else name
+            else:
+                return self.dataList[row][col]
+        #edit
+        elif role == Qt.EditRole:
+            return self.dataList[row][col]
+        else:
+            return None
+
 
 class TagDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):

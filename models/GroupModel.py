@@ -1,8 +1,8 @@
 # model for group tree view
 # an editable tree based on simple TreeModel
 
+import os
 from PyQt5.QtCore import QModelIndex, Qt
-
 from .TreeModel import TreeItem, TreeModel
 
 class GroupItem(TreeItem):
@@ -88,7 +88,10 @@ class GroupModel(TreeModel):
         super(GroupModel, self).__init__(rootItem, parent)
 
         self._currentKey = 9 # key for each item
-        self._saveRequired = False  # require saving if True 
+        self._saveRequired = False  # require saving if True
+
+        # item count for each group
+        self.itemsList = []
 
 
     def setup(self, items=[], parent=None):
@@ -104,6 +107,10 @@ class GroupModel(TreeModel):
         self._saveRequired = False
         self._setupData(items, parent)
         self.endResetModel()
+
+    def updateItems(self, items):
+        '''items for counting'''
+        self.itemsList = items
 
     def _setupData(self, items=[], parent=None):
         '''setup model data for generating the tree
@@ -217,6 +224,45 @@ class GroupModel(TreeModel):
             self.headerDataChanged.emit(orientation, section, section)
 
         return result
+
+    def data(self, index, role):
+        '''get value at current index'''
+        if not index.isValid():
+            return None
+
+        # underlying data
+        group = self._getItem(index)
+        name = group.data(index.column())
+
+        # displaying
+        if role == Qt.DisplayRole:
+            keys = group.keys()
+            count = 0 # count
+
+            # unreferenced items
+            if keys==[2]:
+                for item in self.itemsList:
+                    path = item[3]
+                    if not path or not os.path.exists(path):
+                        count += 1
+            # all items
+            elif keys==[3]:
+                count = len(self.itemsList)
+            # common items
+            else:                
+                for item in self.itemsList:
+                    if item[1] in keys:
+                        count += 1
+
+            return '{0} ({1})'.format(name, count) if count else name
+
+        # editing
+        elif role == Qt.EditRole:
+            return name
+
+        else:
+            return None       
+            
 
     def setData(self, index, value, role=Qt.EditRole):
         '''edit item data with specified index

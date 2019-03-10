@@ -61,6 +61,10 @@ class MainMenu(object):
         # edit items triggered by removing group or tag
         self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
         self.mainWindow.tagsView().tagRemoved.connect(self.mainWindow.itemsView().slot_untagItems)
+
+        # item counter for group, tag
+        self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.groupsView().slot_updateCounter)
+        self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.tagsView().slot_updateCounter)
         
 
 

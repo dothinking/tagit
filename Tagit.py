@@ -103,19 +103,24 @@ class MainWindow(QMainWindow):
         self.setTitle()
         self.groupsTreeView.setFocus()
 
-        # init groups tree view
+        # get data
         groups = data.get(self.key_group, {}).get('children', default_groups)
-        key = data.get(self.key_setting, {}).get('selected_group', 2)
-        self.groupsTreeView.setup(groups, key)
-
-        # init tags table view
         tags = data.get(self.key_tag, default_tags)
-        key = data.get(self.key_setting, {}).get('selected_tag', -1)
-        self.tagsTableView.setup(tags, key)
+        items = data.get(self.key_item, [])
+
+        selected_group = data.get(self.key_setting, {}).get('selected_group', 2)
+        selected_tag = data.get(self.key_setting, {}).get('selected_tag', -1)
+
+        # init groups tree view        
+        self.groupsTreeView.setup(groups, selected_group)
+        self.groupsTreeView.model().updateItems(items)
+
+        # init tags table view        
+        self.tagsTableView.setup(tags, selected_tag)
+        self.tagsTableView.model().updateItems(items)
         self.tagsTableView.setColumnHidden(0, True) # hide first column -> key
 
         # init items table view
-        items = data.get(self.key_item, [])
         self.itemsTableView.setup(items)
         self.itemsTableView.setColumnHidden(1, True)
         self.itemsTableView.setColumnHidden(3, True)
