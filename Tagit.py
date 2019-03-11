@@ -192,7 +192,7 @@ class MainWindow(QMainWindow):
         # separate widgets        
         self.groupsTreeView = GroupTreeView(['GROUP']) # groups tree view        
         self.tagsTableView = TagTableView(['key', 'Tag', 'Color']) # tags table view
-        headers = ['Title', 'Group', 'Tags', 'Path', 'Date', 'Notes']
+        headers = ['Item Title', 'Group', 'Tags', 'Path', 'Create Date', 'Notes']
         self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView) # main table widget
 
         # arranged views

@@ -27,6 +27,9 @@ class MainMenu(object):
                 ('Edit Item', None, None, 'edit_item.png', 'Edit item'),
                 ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
                 (),
+                ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item.png', 'Open attached reference'),
+                ('Comments', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+M', 'item.png', 'Edit/view comments on current item'),
+                (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
                 ('Remove Group', self.mainWindow.groupsView().slot_removeRow, None, 'del_group.png','Delete selected group'),
@@ -123,6 +126,8 @@ class MainMenu(object):
         item_selected = not self.mainWindow.itemsView().selectionModel().selection().isEmpty()
         self.mapActions['edit item'].setEnabled(item_activated and item_selected)
         self.mapActions['remove item'].setEnabled(item_activated and item_selected)
+        self.mapActions['open reference'].setEnabled(item_activated and item_selected)
+        self.mapActions['comments'].setEnabled(item_activated and item_selected)
 
     def createToolBars(self):
         '''create tool bar based on menu items'''
@@ -136,6 +141,8 @@ class MainMenu(object):
         self.editToolBar.addAction(self.mapActions['new item'])
         self.editToolBar.addAction(self.mapActions['edit item'])
         self.editToolBar.addAction(self.mapActions['remove item'])
+        self.editToolBar.addAction(self.mapActions['open reference'])
+        self.editToolBar.addAction(self.mapActions['comments'])
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new group'])
         self.editToolBar.addAction(self.mapActions['new sub-group'])

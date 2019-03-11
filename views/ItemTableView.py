@@ -5,9 +5,9 @@
 import os
 import time
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex, QModelIndex, pyqtSignal
+from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex, QModelIndex, pyqtSignal, QUrl
 from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction, QMessageBox
-from PyQt5.QtGui import QPixmap, QIcon, QColor
+from PyQt5.QtGui import QPixmap, QIcon, QColor, QDesktopServices
 
 from models.ItemModel import ItemModel, ItemDelegate, SortFilterProxyModel
 
@@ -21,17 +21,7 @@ class ItemTableView(QTableView):
         super(ItemTableView, self).__init__(parent)
 
         self.groupView = groupView
-        self.tagView = tagView
-
-        # table style
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
-        self.setSelectionBehavior(QTableView.SelectRows)
-        self.setAlternatingRowColors(True)
-        self.setSortingEnabled(True)
-        self.sortByColumn(ItemModel.NAME, Qt.AscendingOrder)
-        self.verticalHeader().hide()
-        self.resizeColumnsToContents()
+        self.tagView = tagView        
 
         # source model
         self.sourceModel = ItemModel(header)
@@ -55,6 +45,24 @@ class ItemTableView(QTableView):
         self.sourceModel.dataChanged.connect(
             lambda: self.itemsChanged.emit(self.sourceModel.serialize(save=False))
             )
+
+        # table style
+        self.initTableStyle()
+
+    def initTableStyle(self):
+        # table style
+        self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(ItemModel.DATE, QHeaderView.ResizeToContents)        
+        self.verticalHeader().hide()
+
+        self.setSelectionBehavior(QTableView.SelectRows)
+        self.setAlternatingRowColors(True)
+
+        # sorting
+        self.setSortingEnabled(True)
+        self.sortByColumn(ItemModel.NAME, Qt.AscendingOrder)
+        
 
     def setup(self, data=[]):
         '''reset tag table with specified model data'''
@@ -133,9 +141,15 @@ class ItemTableView(QTableView):
 
         # menus on items
         menu = QMenu()
+
+        # edit item
         menu.addAction(self.tr("New Item"), self.slot_appendRow)
         menu.addAction(self.tr("Edit Item"), self.slot_editRow)
-        menu.addAction(self.tr("Remove Item"), self.slot_removeRows)        
+        menu.addAction(self.tr("Remove Item"), self.slot_removeRows)
+
+        menu.addSeparator()
+        menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
+        menu.addAction(self.tr("Comments"), self.slot_navigateTo)
 
         # menus on groups
         menu.addSeparator()
@@ -179,8 +193,16 @@ class ItemTableView(QTableView):
                     self.sourceModel.setData(index, data)
 
     def slot_editRow(self):
-        '''edit item'''
         pass
+
+
+    def slot_navigateTo(self):
+        '''open current item'''
+        index = self.selectionModel().currentIndex()
+        if not index.isValid():
+            return
+        path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def slot_removeRows(self):
         '''delete selected item'''

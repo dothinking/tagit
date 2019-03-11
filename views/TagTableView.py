@@ -16,16 +16,6 @@ class TagTableView(QTableView):
     def __init__(self, header, parent=None):
         super(TagTableView, self).__init__(parent)
 
-        # table style
-        # self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
-        self.setSelectionMode(QTableView.SingleSelection)
-        self.setSelectionBehavior(QTableView.SelectRows)
-        self.setAlternatingRowColors(True)
-        self.resizeColumnsToContents()
-        self.verticalHeader().hide()
-
         # model
         self.sourceModel = TagModel(header)
         self.setModel(self.sourceModel)
@@ -38,7 +28,21 @@ class TagTableView(QTableView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
 
+        # table style
+        self.initTableStyle()
 
+    def initTableStyle(self):
+        # table style
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(TagModel.COLOR, QHeaderView.ResizeToContents)
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+
+        self.setSelectionMode(QTableView.SingleSelection)
+        self.setSelectionBehavior(QTableView.SelectRows)
+
+        self.setAlternatingRowColors(True)
+      
     def setup(self, data=[], selected_key=-1):
         '''reset tag table with specified model data,
            and set the row with specified key as selected
