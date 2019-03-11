@@ -1,16 +1,16 @@
 # model, delegate for Tags table view
 # 
 
-from PyQt5.QtCore import QModelIndex, Qt, QRect, QEvent
+from PyQt5.QtCore import QModelIndex, Qt, QRect, QEvent, QSize
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (QStyledItemDelegate, QHBoxLayout,QWidget,QStyle, QStyleOptionButton, 
-    QColorDialog, QPushButton)
+from PyQt5.QtWidgets import QStyledItemDelegate, QStyle, QColorDialog
 
 from .TableModel import TableModel
 
-KEY, NAME, COLOR = range(3)
-
 class TagModel(TableModel):
+
+    KEY, NAME, COLOR = range(3)
+
     def __init__(self, headers, parent=None):        
         super(TagModel, self).__init__(headers, parent)
 
@@ -27,13 +27,13 @@ class TagModel(TableModel):
         '''get ModelIndex with specified key in the associated object'''
         for i, (tag_key, *_) in enumerate(self.dataList):
             if tag_key == key:
-                return self.index(i, NAME)
+                return self.index(i, TagModel.NAME)
         return QModelIndex()
 
     def getKeyByIndex(self, index):
         row = index.row()
         if 0<=row<len(self.dataList):
-            return self.dataList[row][0]
+            return self.dataList[row][TagModel.KEY]
         else:
             return -1
  
@@ -68,7 +68,7 @@ class TagModel(TableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        if index.row()==0 or index.column() != NAME:
+        if index.row()==0 or index.column() != TagModel.NAME:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -82,8 +82,8 @@ class TagModel(TableModel):
         # display
         if role == Qt.DisplayRole:
             if col == 1: # NAME
-                key = self.dataList[row][0] # KEY, NAME, COLOR
-                name = self.dataList[row][1]
+                key = self.dataList[row][TagModel.KEY] # KEY, NAME, COLOR
+                name = self.dataList[row][TagModel.NAME]
                 count = 0
                 # UNTAGGED: check empty tags list from items
                 if key==-1:
@@ -109,41 +109,46 @@ class TagDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super(TagDelegate, self).__init__(parent)
         self.ratio = 0.55 # button width=height=ration*cell_height
-        self.ref_btn = QPushButton() # style reference button
 
-    def _getButtonRect(self, option):
-        '''determin button rectange area according to QStyleOptionViewItem'''
-        R = option.rect
-        h = self.ratio*R.height()
+    def _getButtonRect(self, rect):
+        '''determin drawing area'''
+        h = self.ratio*rect.height()
         w = h
-        dx = (R.width()-w)/2
-        dy = (1-self.ratio)/2*R.height()
-        return R.adjusted(dx, dy, -dx, -dy)
+        dx = (rect.width()-w)/2
+        dy = (1-self.ratio)/2*rect.height()
+        return rect.adjusted(dx, dy, -dx, -dy)
+
+    def sizeHint(self, option, index):
+        '''calculate size needed by the delegate to display the item''' 
+        if index.column() == TagModel.COLOR:
+            rect = super(TagDelegate, self).sizeHint(option, index)
+            h = self.ratio*rect.height()
+            return h * QSize(3, 1)
+        else:
+            return super(TagDelegate, self).sizeHint(option, index)
 
     def paint(self, painter, option, index):
-        '''paint item in column 1 as user defined'''
-
+        '''paint item as user defined'''
         # dismiss focus style        
         if option.state & QStyle.State_HasFocus: 
             option.state ^= QStyle.State_HasFocus
 
-        if index.column() == COLOR: # since KEY is not shown in the view
-            # reference button for the style of QStyleOptionButton            
-            self.ref_btn.setStyleSheet('background-color: {0}'.format(index.data()))
-
-            # draw button
-            btn = QStyleOptionButton()
-            btn.rect = self._getButtonRect(option)
-            self.ref_btn.style().drawControl(QStyle.CE_PushButton, btn, painter, self.ref_btn)
+        if index.column() == TagModel.COLOR:
+            painter.save()
+            painter.setBrush(QColor(index.data()))
+            painter.setPen(Qt.NoPen)
+            rect = self._getButtonRect(option.rect)
+            painter.drawRect(rect)
+            painter.restore()
         else:
-            super(TagDelegate, self).paint(painter, option, index)
+            super(TagDelegate, self).paint(painter, option, index)    
 
     def editorEvent(self, event, model, option, index):
         '''it called when editing of an item starts.
            only single click on the drawn button is allowable
         '''
-        if index.column() == COLOR:
-            if self._getButtonRect(option).contains(event.pos()) and event.button() == Qt.LeftButton:
+        if index.column() == TagModel.COLOR:
+            if self._getButtonRect(option.rect).contains(event.pos()) and event.button() == Qt.LeftButton:
                 self.setModelData(None, model, index)
             return True
         else:
@@ -151,7 +156,7 @@ class TagDelegate(QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         '''set model data after editing'''        
-        if index.column() == COLOR:
+        if index.column() == TagModel.COLOR:
             color = QColorDialog.getColor(QColor(index.data()))
             if color.isValid():
                 model.setData(index, color.name())

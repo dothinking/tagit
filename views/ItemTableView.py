@@ -9,14 +9,13 @@ from PyQt5.QtCore import QItemSelectionModel, Qt, QPersistentModelIndex, QModelI
 from PyQt5.QtWidgets import QHeaderView, QTableView, QMenu, QAction, QMessageBox
 from PyQt5.QtGui import QPixmap, QIcon, QColor
 
-from models.ItemModel import (ItemModel, ItemDelegate, SortFilterProxyModel,
-    NAME, GROUP, TAGS, PATH, DATE, NOTES)
+from models.ItemModel import ItemModel, ItemDelegate, SortFilterProxyModel
 
 from views.CreateItemDialog import CreateItemDialog
 
 class ItemTableView(QTableView):
 
-    itemsChanged = pyqtSignal(list)
+    itemsChanged = pyqtSignal(list) # signal for group/tag to update counting
 
     def __init__(self, header, groupView, tagView, parent=None):
         super(ItemTableView, self).__init__(parent)
@@ -30,9 +29,9 @@ class ItemTableView(QTableView):
         self.setSelectionBehavior(QTableView.SelectRows)
         self.setAlternatingRowColors(True)
         self.setSortingEnabled(True)
-        self.sortByColumn(NAME, Qt.AscendingOrder)
+        self.sortByColumn(ItemModel.NAME, Qt.AscendingOrder)
         self.verticalHeader().hide()
-        # self.resizeColumnsToContents()
+        self.resizeColumnsToContents()
 
         # source model
         self.sourceModel = ItemModel(header)
@@ -122,7 +121,7 @@ class ItemTableView(QTableView):
 
     def customContextMenu(self, position):
         '''show context menu'''
-        indexes = self.selectionModel().selectedRows(GROUP)
+        indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
         if not indexes:
             return
 
@@ -130,7 +129,7 @@ class ItemTableView(QTableView):
         gid = indexes[0].data()
 
         # tags of current item
-        tids = self.selectionModel().selectedRows(TAGS)[0].data()
+        tids = self.selectionModel().selectedRows(ItemModel.TAGS)[0].data()
 
         # menus on items
         menu = QMenu()
@@ -209,7 +208,7 @@ class ItemTableView(QTableView):
     def slot_moveGroup(self):
         '''move selected items to specified group'''
         key = self.sender().key
-        indexes = self.selectionModel().selectedRows(GROUP)
+        indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
         # ATTENTION: performing the moving action in descent order,
         # try not to destroy the default index of the model.
         # otherwise, multi-items could not be moved correctly.
@@ -219,7 +218,7 @@ class ItemTableView(QTableView):
     def slot_attachTag(self):
         '''add tag to current item'''
         key = self.sender().key
-        indexes = self.selectionModel().selectedRows(TAGS)
+        indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
         for index in indexes[::-1]: # ATTENTION
             keys = index.data()
             if key not in keys:
@@ -229,7 +228,7 @@ class ItemTableView(QTableView):
     def slot_removeTag(self):
         '''delete tag from current item'''
         key = self.sender().key
-        indexes = self.selectionModel().selectedRows(TAGS)
+        indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
         for index in indexes[::-1]: # ATTENTION
             keys = index.data()
             if key in keys:
@@ -239,14 +238,14 @@ class ItemTableView(QTableView):
     def slot_ungroupItems(self, keys):
         '''move all items with specified groups list to ungrouped'''
         for i in range(self.sourceModel.rowCount()):
-            index = self.sourceModel.index(i, GROUP)
+            index = self.sourceModel.index(i, ItemModel.GROUP)
             if index.data() in keys:
                 self.sourceModel.setData(index, 1) # 1->Ungrouped        
 
     def slot_untagItems(self, key):
         '''remove specified tag from tags list of each item'''
         for i in range(self.sourceModel.rowCount()):
-            index = self.sourceModel.index(i, TAGS)
+            index = self.sourceModel.index(i, ItemModel.TAGS)
             keys = index.data()
             if key in keys:
                 keys.pop(keys.index(key))
@@ -263,7 +262,7 @@ class ItemTableView(QTableView):
 
         # set filter for column GROUP
         self.proxyModel.setGroupFilter(groups)
-        self.proxyModel.setFilterKeyColumn(GROUP)
+        self.proxyModel.setFilterKeyColumn(ItemModel.GROUP)
 
     def slot_filterByTag(self):
         '''triggered by tag selection changed'''
@@ -276,4 +275,4 @@ class ItemTableView(QTableView):
 
         # set filter for column GROUP
         self.proxyModel.setTagFilter(tag)
-        self.proxyModel.setFilterKeyColumn(TAGS)
+        self.proxyModel.setFilterKeyColumn(ItemModel.TAGS)

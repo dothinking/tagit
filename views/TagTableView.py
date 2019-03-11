@@ -6,7 +6,7 @@ from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
 from PyQt5.QtGui import QColor
 
-from models.TagModel import TagModel, TagDelegate, KEY, NAME, COLOR
+from models.TagModel import TagModel, TagDelegate
 
 
 class TagTableView(QTableView):
@@ -17,6 +17,7 @@ class TagTableView(QTableView):
         super(TagTableView, self).__init__(parent)
 
         # table style
+        # self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
         self.setSelectionMode(QTableView.SingleSelection)
@@ -77,9 +78,9 @@ class TagTableView(QTableView):
 
         row = index.row() + 1
         if self.sourceModel.insertRow(row, index.parent()):
-            child_key = self.sourceModel.index(row, KEY)
-            child_name = self.sourceModel.index(row, NAME)
-            child_color = self.sourceModel.index(row, COLOR)
+            child_key = self.sourceModel.index(row, TagModel.KEY)
+            child_name = self.sourceModel.index(row, TagModel.NAME)
+            child_color = self.sourceModel.index(row, TagModel.COLOR)
 
             # set default data
             self.sourceModel.setData(child_key, self.sourceModel.nextKey())
@@ -107,7 +108,7 @@ class TagTableView(QTableView):
         if reply != QMessageBox.Yes:
             return
         
-        key = self.sourceModel.index(index.row(), KEY).data()
+        key = self.sourceModel.index(index.row(), TagModel.KEY).data()
         if not self.sourceModel.isDefaultItem(index): 
             self.sourceModel.removeRow(index.row())
             # emit removing group signal            

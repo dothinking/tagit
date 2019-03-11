@@ -3,16 +3,17 @@
 
 import os
 
-from PyQt5.QtCore import QSortFilterProxyModel, QModelIndex, Qt, QRect, QEvent
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (QStyledItemDelegate, QHBoxLayout, QWidget, QStyle, QComboBox, QSizePolicy,QStyleOptionButton,
-    QLabel, QPushButton)
+from PyQt5.QtCore import QSortFilterProxyModel, QModelIndex, Qt, QRect, QEvent, QPointF
+from PyQt5.QtGui import QPainter, QColor
+from PyQt5.QtWidgets import QStyledItemDelegate, QStyle
 
 from models.TableModel import TableModel
 
-NAME, GROUP, TAGS, PATH, DATE, NOTES = range(6)
 
 class ItemModel(TableModel):
+
+    NAME, GROUP, TAGS, PATH, DATE, NOTES = range(6)
+
     def __init__(self, headers, parent=None):        
         super(ItemModel, self).__init__(headers, parent)
 
@@ -21,12 +22,15 @@ class ItemModel(TableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        if index.column() not in (NAME, TAGS):
+        if index.column() != ItemModel.NAME:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
  
 class SortFilterProxyModel(QSortFilterProxyModel):
+
+    NAME, GROUP, TAGS, PATH, DATE, NOTES = range(6)
+
     def __init__(self, parent=None):
         super(SortFilterProxyModel, self).__init__(parent)
         self.groupList = []
@@ -40,13 +44,13 @@ class SortFilterProxyModel(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, sourceRow, sourceParent):
         '''filter with group and tag'''
-        if self.filterKeyColumn() == GROUP:
-            group = self.sourceModel().index(sourceRow, GROUP, sourceParent).data()
+        if self.filterKeyColumn() == SortFilterProxyModel.GROUP:
+            group = self.sourceModel().index(sourceRow, SortFilterProxyModel.GROUP, sourceParent).data()
             # Unreferenced: path is invalid
             if not self.groupList:
                 return False
             elif self.groupList[0]==2:
-                path = self.sourceModel().index(sourceRow, PATH, sourceParent).data()                
+                path = self.sourceModel().index(sourceRow, SortFilterProxyModel.PATH, sourceParent).data()                
                 return not path or not os.path.exists(path)
             # ALL
             elif self.groupList[0]==3:
@@ -54,8 +58,8 @@ class SortFilterProxyModel(QSortFilterProxyModel):
             else:
                 return group in self.groupList
 
-        elif self.filterKeyColumn() == TAGS:
-            tags = self.sourceModel().index(sourceRow, TAGS, sourceParent).data()
+        elif self.filterKeyColumn() == SortFilterProxyModel.TAGS:
+            tags = self.sourceModel().index(sourceRow, SortFilterProxyModel.TAGS, sourceParent).data()
             if not self.tagId:
                 return False
             elif self.tagId==-1: # Untagged
@@ -66,61 +70,73 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         # Not our business.
         return super(SortFilterProxyModel, self).filterAcceptsRow(sourceRow, sourceParent)
 
-class ItemDelegate(QStyledItemDelegate):
+class ItemDelegate(QStyledItemDelegate):    
+
     def __init__(self, parent=None):
         super(ItemDelegate, self).__init__(parent)
-        self.ratio = 0.55 # button width=height=ration*cell_height
-        self.ref_btn = QPushButton() # style reference button
+        self.ratio = 0.55
+        self.space_ratio = 0.5
 
-    def _getButtonRect(self, option):
-        '''determin button rectange area according to QStyleOptionViewItem'''
-        R = option.rect
-        h = self.ratio*R.height()
-        w = h
-        x = R.left() + (R.width()-w)/2
-        y = R.top() + (1-self.ratio)/2*R.height()
-        return QRect(x,y,w,h)
+    def allTags(self):
+        '''get latest tags list from parent -> ItemTanleView'''
+        tags = self.parent().tags()
+        return {key:(name, color) for key, name, color in tags}
 
     def paint(self, painter, option, index):
         '''render style for tags list'''
-        if index.column() == TAGS:
-            # reference button for the style of QStyleOptionButton            
-            self.ref_btn.setStyleSheet('background-color: {0}'.format('#ffccaa'))
+        if index.column() == ItemModel.NAME:
+            painter.save()
 
-            # draw button
-            btn = QStyleOptionButton()
-            btn.text = '='
-            btn.rect = self._getButtonRect(option)
-            self.ref_btn.style().drawControl(QStyle.CE_PushButton, btn, painter, self.ref_btn)
+            # paint selection style
+            # otherwise, no selection style is shown
+            if option.state & QStyle.State_Selected:
+                painter.fillRect(option.rect, option.palette.highlight())
+
+            painter.setRenderHint(QPainter.Antialiasing, True)           
+
+            # filling rect
+            H = option.rect.height() # cell height
+            h = self.ratio*H # fill area height
+            dy_fill = (H-h)/2
+
+            # font rect
+            fm = painter.fontMetrics()
+            dy_text = (H-fm.ascent()-fm.descent())/2+fm.ascent()
+
+            # seperate space
+            single_space = 0.5*self.space_ratio*h
+
+            # move painter to top left side of cell
+            painter.translate(option.rect.x(), option.rect.y())           
+            
+            # draw text: name
+            name = index.data()
+            painter.translate(single_space, dy_text) # move to start point
+            painter.drawText(QPointF(0.0,0.0), name) # draw text
+            painter.translate(fm.width(name), -dy_text) # move to next position
+
+            # draw tags: filling area with tag name
+            tags = index.model().index(index.row(), ItemModel.TAGS).data()
+            allTags = self.allTags()
+            for key in tags:
+                tag_name, color_name = allTags.get(key, (None, None))
+                if not tag_name or not color_name:
+                    continue
+
+                w = fm.width(tag_name) + 2*single_space
+                # move to point starting to draw filling rect
+                painter.translate(2*single_space, dy_fill)
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(QColor(color_name))
+                painter.drawRoundedRect(0, 0, w, h, single_space, single_space) # draw rect
+                painter.translate(0, -dy_fill) # move to baseline in y direction
+
+                painter.translate(single_space, dy_text) # start point for drawing text
+                painter.setPen(QColor('#ffffff'))
+                painter.drawText(QPointF(0.0,0.0), tag_name) # draw text
+                painter.translate(w-single_space, -dy_text) # move to baseline in y direction
+
+            painter.restore()
+
         else:
             super(ItemDelegate, self).paint(painter, option, index)
-
-    def createEditor(self, parent, option, index):
-        if index.column() == TAGS:
-            editor = QComboBox(parent)
-            editor.setEditable(True)
-            tags = self.parent().tags()
-            for tag in tags:
-                editor.addItem(tag[1], tag) # KEY, NAME, COLOR
-            editor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-            return editor
-        else:
-            return QStyledItemDelegate().createEditor(parent, option, index)
-
-    # def setEditorData(self, editor, index):
-    #     value = index.model().data(index, Qt.EditRole)
-
-    #     editor.setValue(value)
-
-    def setModelData(self, editor, model, index):
-        '''set model data after editing'''        
-        if index.column() == TAGS:
-            tag = editor.currentData()
-            keys = index.data()
-            if tag[0] not in keys:
-                keys.append(tag[0])
-                model.setData(index, keys)
-        else:
-            super(ItemDelegate, self).setModelData(editor, model, index)
-
-    
