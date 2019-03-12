@@ -52,8 +52,7 @@ class TagTableView(QTableView):
         # set selected item
         index = self.sourceModel.getIndexByKey(selected_key)        
         if index.isValid():
-            self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
-            # self.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect)
+            self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
 
     def customContextMenu(self, position):
         '''show context menu'''
@@ -78,7 +77,10 @@ class TagTableView(QTableView):
 
     def slot_insertRow(self):
         '''inset item at the same level with current selected item'''
-        index = self.selectionModel().currentIndex()
+        for index in self.selectionModel().selectedRows(self.sourceModel.KEY):
+            break
+        else:
+            return
 
         row = index.row() + 1
         if self.sourceModel.insertRow(row, index.parent()):
@@ -123,3 +125,4 @@ class TagTableView(QTableView):
            :param items: the latest items list
         '''
         self.sourceModel.updateItems(items)
+        self.sourceModel.layoutChanged.emit() # update display immediately

@@ -8,6 +8,8 @@ from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QStyledItemDelegate, QStyle
 
 from models.TableModel import TableModel
+from models.TagModel import TagModel
+from models.GroupModel import GroupModel
 
 
 class ItemModel(TableModel):
@@ -29,8 +31,6 @@ class ItemModel(TableModel):
  
 class SortFilterProxyModel(QSortFilterProxyModel):
 
-    NAME, GROUP, TAGS, PATH, DATE, NOTES = range(6)
-
     def __init__(self, parent=None):
         super(SortFilterProxyModel, self).__init__(parent)
         self.groupList = []
@@ -44,25 +44,25 @@ class SortFilterProxyModel(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, sourceRow, sourceParent):
         '''filter with group and tag'''
-        if self.filterKeyColumn() == SortFilterProxyModel.GROUP:
-            group = self.sourceModel().index(sourceRow, SortFilterProxyModel.GROUP, sourceParent).data()
+        if self.filterKeyColumn() == ItemModel.GROUP:
+            group = self.sourceModel().index(sourceRow, ItemModel.GROUP, sourceParent).data()
             # Unreferenced: path is invalid
             if not self.groupList:
                 return False
-            elif self.groupList[0]==2:
-                path = self.sourceModel().index(sourceRow, SortFilterProxyModel.PATH, sourceParent).data()                
+            elif self.groupList[0]==GroupModel.UNREFERENCED:
+                path = self.sourceModel().index(sourceRow, ItemModel.PATH, sourceParent).data()                
                 return not path or not os.path.exists(path)
             # ALL
-            elif self.groupList[0]==3:
+            elif self.groupList[0]==GroupModel.ALLGROUPS:
                 return True
             else:
                 return group in self.groupList
 
-        elif self.filterKeyColumn() == SortFilterProxyModel.TAGS:
-            tags = self.sourceModel().index(sourceRow, SortFilterProxyModel.TAGS, sourceParent).data()
-            if not self.tagId:
+        elif self.filterKeyColumn() == ItemModel.TAGS:
+            tags = self.sourceModel().index(sourceRow, ItemModel.TAGS, sourceParent).data()
+            if tags==None or self.tagId==None:
                 return False
-            elif self.tagId==-1: # Untagged
+            elif self.tagId==TagModel.NOTAG: # Untagged
                 return tags==[]
             else:
                 return self.tagId in tags

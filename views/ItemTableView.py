@@ -86,9 +86,7 @@ class ItemTableView(QTableView):
         '''
         for item in config:
             # group information
-            key = item.get('key', 1)
-            name = item.get('name')
-            children = item.get('children', [])
+            name, key, children = item
 
             # create menu action, but skip current group
             if key not in keys:                
@@ -104,7 +102,7 @@ class ItemTableView(QTableView):
         '''attach oe detach tags for current item'''        
         for tag in self.tags():
             # UNTAGGED
-            if tag[0]<0:
+            if tag[self.tagView.model().KEY] == self.tagView.model().NOTAG:
                 continue
 
             # set icon with bg-color same as tag
@@ -154,9 +152,11 @@ class ItemTableView(QTableView):
         # menus on groups
         menu.addSeparator()
         move = QMenu(self.tr('Move to Group'))
-        groups = self.rootGroup().get('children', [])
+        groups = self.rootGroup()[self.groupView.model().CHILDREN]
         
-        self.setupCascadeGroupMenu(move, groups, [gid, 2, 3]) # 2->UNREFERENCED, 3->ALL GROUP
+        self.setupCascadeGroupMenu(move, groups, [gid, 
+                self.groupView.model().UNREFERENCED,
+                self.groupView.model().ALLGROUPS]) # 2->UNREFERENCED, 3->ALL GROUP
         menu.addMenu(move)
 
         # menus on tags
@@ -170,13 +170,13 @@ class ItemTableView(QTableView):
     def slot_appendRow(self):
         '''inset items'''
         # current gruop
-        indexes = self.groupView.selectionModel().selectedRows()
-        group = 1 # UNGROUP
+        indexes = self.groupView.selectionModel().selectedRows(self.groupView.model().KEY)
+        group = self.groupView.model().UNGROUPED # UNGROUP
         if indexes and indexes[0].isValid():
-            group = indexes[0].internalPointer().key()
+            group = indexes[0].data()
         # set default group as UNGROUP, though current group is UNREFERENCED(2) or ALL GROUPS(3)
-        if group in [2,3]:
-            group = 1
+        if group in [self.groupView.model().UNREFERENCED,self.groupView.model().ALLGROUPS]:
+            group = self.groupView.model().UNGROUPED
 
         # add item
         dlg = CreateItemDialog()
@@ -262,7 +262,7 @@ class ItemTableView(QTableView):
         for i in range(self.sourceModel.rowCount()):
             index = self.sourceModel.index(i, ItemModel.GROUP)
             if index.data() in keys:
-                self.sourceModel.setData(index, 1) # 1->Ungrouped        
+                self.sourceModel.setData(index, self.groupView.model().UNGROUPED) # Ungrouped        
 
     def slot_untagItems(self, key):
         '''remove specified tag from tags list of each item'''
@@ -276,9 +276,9 @@ class ItemTableView(QTableView):
     def slot_filterByGroup(self):
         '''triggered by group selection changed'''
         # get selected group
-        indexes = self.groupView.selectionModel().selectedRows()
-        if indexes and indexes[0].isValid():
-            groups = indexes[0].internalPointer().keys()
+        for index in self.groupView.selectedIndexes():
+            groups = index.internalPointer().keys()
+            break
         else:
             groups = None       
 
@@ -289,9 +289,9 @@ class ItemTableView(QTableView):
     def slot_filterByTag(self):
         '''triggered by tag selection changed'''
         # get selected tag
-        indexes = self.tagView.selectionModel().selectedIndexes()
-        if indexes and indexes[0].isValid():
-            tag = self.tagView.model().index(indexes[0].row(), 0).data()
+        for index in self.tagView.selectedIndexes():
+            tag = index.siblingAtColumn(self.tagView.model().KEY).data()
+            break
         else:
             tag = None       
 

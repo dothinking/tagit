@@ -11,11 +11,18 @@ class TagModel(TableModel):
 
     KEY, NAME, COLOR = range(3)
 
+    NOTAG = 0
+
     def __init__(self, headers, parent=None):        
         super(TagModel, self).__init__(headers, parent)
 
+        self.defaultTags = [[TagModel.NOTAG, 'Untagged', '#000000']]
+
+        self.initData()
+
+    def initData(self):
         # key for each item
-        # key=-1 is the default item: untagged
+        # key=0 is the default item: untagged
         # so common item starts from key=1
         self._currentKey = 0
 
@@ -30,23 +37,24 @@ class TagModel(TableModel):
                 return self.index(i, TagModel.NAME)
         return QModelIndex()
 
-    def getKeyByIndex(self, index):
-        row = index.row()
-        if 0<=row<len(self.dataList):
-            return self.dataList[row][TagModel.KEY]
-        else:
-            return -1
  
     def setup(self, tags=[]):
         '''setup model data:
            it is convenient to reset data after the model is created
-        '''
-        self._currentKey = 0
+        ''' 
+        if not tags:
+            tags = self.defaultTags
+
+        # reset data
+        self.initData()
+
+        # calculate current key
         for key, name, color in tags:
             if self._currentKey<key:
                 self._currentKey = key
 
-        self.beginResetModel()
+        # reset model data
+        self.beginResetModel()        
         self.dataList = tags        
         self.endResetModel()
 
@@ -81,12 +89,12 @@ class TagModel(TableModel):
         row, col = index.row(), index.column()
         # display
         if role == Qt.DisplayRole:
-            if col == 1: # NAME
+            if col == TagModel.NAME:
                 key = self.dataList[row][TagModel.KEY] # KEY, NAME, COLOR
                 name = self.dataList[row][TagModel.NAME]
                 count = 0
                 # UNTAGGED: check empty tags list from items
-                if key==-1:
+                if key==TagModel.NOTAG:
                     for item in self.itemsList:
                         if not item[2]:
                             count += 1

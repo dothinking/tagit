@@ -60,7 +60,7 @@ class TreeModel(QAbstractItemModel):
         '''
         raise NotImplementedError
 
-    def _getItem(self, index):
+    def getItem(self, index):
         '''get the real instance of current tree item'''
         if index.isValid():
             item = index.internalPointer() 
@@ -70,7 +70,7 @@ class TreeModel(QAbstractItemModel):
 
     def rowCount(self, parent=QModelIndex()):
         '''count rows under the given parent'''
-        parentItem = self._getItem(parent)
+        parentItem = self.getItem(parent)
         return parentItem.childCount()
 
     def columnCount(self, parent=QModelIndex()):
@@ -85,7 +85,7 @@ class TreeModel(QAbstractItemModel):
         if role != Qt.DisplayRole and role != Qt.EditRole:
             return None
 
-        item = self._getItem(index)
+        item = self.getItem(index)
         return item.data(index.column())    
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -99,7 +99,7 @@ class TreeModel(QAbstractItemModel):
            specified by the given row, column and parent index.
         '''
         if self.hasIndex(row, column, parent):
-            parentItem = self._getItem(parent)
+            parentItem = self.getItem(parent)
             childItem = parentItem.child(row)
             if childItem:
                 # creates a model index for the given row and column with the internal item.
@@ -111,7 +111,7 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
 
-        childItem = self._getItem(index)
+        childItem = self.getItem(index)
         parentItem = childItem.parent()
 
         if parentItem == self.rootItem:

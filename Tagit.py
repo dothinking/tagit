@@ -12,15 +12,18 @@ from views.GroupTreeView import GroupTreeView
 from views.TagTableView import TagTableView
 from views.ItemTableView import ItemTableView
 
+from models.GroupModel import GroupModel
+from models.TagModel import TagModel
+from models.ItemModel import ItemModel
 
 class MainWindow(QMainWindow):
 
-    app_name = 'Tagit'
-    app_version = '0.5'
-    key_group = 'groups'
-    key_tag = 'tags'
-    key_item = 'items'
-    key_setting = 'settings'
+    APP_NAME = 'Tagit'
+    APP_VERSION = '0.5'
+    KEY_GROUP = 'groups'
+    KEY_TAG = 'tags'
+    KEY_ITEM = 'items'
+    KEY_SETTING = 'settings'
 
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -68,13 +71,6 @@ class MainWindow(QMainWindow):
            - database is not specified -> init by default and return true
            - specified but is invalid  -> init by default but return false
         '''
-        default_groups = [
-            {'key':1, 'name':'Ungrouped'},
-            {'key':2, 'name':'Unreferenced'},
-            {'key':3, 'name':'All Groups'},
-        ]
-        default_tags = [[-1, 'Untagged', '#000000']]        
-
         ok = True
         if database and os.path.exists(database):
             # load database
@@ -84,48 +80,52 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 ok = False
             else:
-                if self.app_name in data: # valid database
+                if self.APP_NAME in data: # valid database
                     self._database = database
-                    self._initData(default_groups, default_tags, data)
+                    self._initData(data)
                     return ok
                 else:
                     ok = False
 
         # init by default if load data from database failed
         self._database = None
-        self._initData(default_groups, default_tags)
+        self._initData()
 
         return ok
         
-    def _initData(self, default_groups, default_tags, data={}):
+    def _initData(self, data={}):
         '''load data from database'''
         # set window title      
         self.setTitle()
         self.groupsTreeView.setFocus()
 
         # get data
-        groups = data.get(self.key_group, {}).get('children', default_groups)
-        tags = data.get(self.key_tag, default_tags)
-        items = data.get(self.key_item, [])
+        if self.KEY_GROUP in data:
+            groups = data.get(self.KEY_GROUP)[GroupModel.CHILDREN]
+        else:
+            groups = []
+        tags = data.get(self.KEY_TAG, [])
+        items = data.get(self.KEY_ITEM, [])
 
-        selected_group = data.get(self.key_setting, {}).get('selected_group', 2)
-        selected_tag = data.get(self.key_setting, {}).get('selected_tag', -1)
+        selected_group = data.get(self.KEY_SETTING, {}).get('selected_group', GroupModel.ALLGROUPS)
+        selected_tag = data.get(self.KEY_SETTING, {}).get('selected_tag', TagModel.NOTAG)
 
         # init groups tree view        
         self.groupsTreeView.setup(groups, selected_group)
         self.groupsTreeView.model().updateItems(items)
+        self.groupsTreeView.setColumnHidden(GroupModel.KEY, True)
 
         # init tags table view        
         self.tagsTableView.setup(tags, selected_tag)
         self.tagsTableView.model().updateItems(items)
-        self.tagsTableView.setColumnHidden(0, True) # hide first column -> key
+        self.tagsTableView.setColumnHidden(TagModel.KEY, True) # hide first column -> key
 
         # init items table view
         self.itemsTableView.setup(items)
-        self.itemsTableView.setColumnHidden(self.itemsTableView.model().GROUP, True)
-        self.itemsTableView.setColumnHidden(self.itemsTableView.model().TAGS, True)
-        self.itemsTableView.setColumnHidden(self.itemsTableView.model().PATH, True)
-        self.itemsTableView.setColumnHidden(self.itemsTableView.model().NOTES, True)
+        self.itemsTableView.setColumnHidden(ItemModel.GROUP, True)
+        self.itemsTableView.setColumnHidden(ItemModel.TAGS, True)
+        self.itemsTableView.setColumnHidden(ItemModel.PATH, True)
+        self.itemsTableView.setColumnHidden(ItemModel.NOTES, True)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -146,25 +146,25 @@ class MainWindow(QMainWindow):
         '''save project data to database'''
         # current group
         if self.groupsTreeView.selectedIndexes():
-            index = self.groupsTreeView.selectionModel().selectedRows()
-            selected_group = index[0].internalPointer().key()
+            name_index = self.groupsTreeView.selectedIndexes()[0]
+            selected_group = name_index.siblingAtColumn(GroupModel.KEY).data()
         else:
-            selected_group = -1
+            selected_group = self.groupsTreeView.model().ALLGROUPS
 
         # current tag
         if self.tagsTableView.selectedIndexes():
-            index = self.tagsTableView.selectionModel().currentIndex()
-            selected_tag = self.tagsTableView.model().getKeyByIndex(index)
+            name_index = self.tagsTableView.selectedIndexes()[0]
+            selected_tag = name_index.siblingAtColumn(TagModel.KEY).data()
         else:
-            selected_tag = -1
+            selected_tag = TagModel.NOTAG
 
         # collect all data
         data = {
-            self.app_name   : self.app_version,
-            self.key_group  : self.groupsTreeView.model().serialize(),
-            self.key_tag    : self.tagsTableView.model().serialize(),
-            self.key_item   : self.itemsTableView.model().sourceModel().serialize(),
-            self.key_setting: {'selected_group': selected_group,
+            self.APP_NAME   : self.APP_VERSION,
+            self.KEY_GROUP  : self.groupsTreeView.model().serialize(),
+            self.KEY_TAG    : self.tagsTableView.model().serialize(),
+            self.KEY_ITEM   : self.itemsTableView.model().sourceModel().serialize(),
+            self.KEY_SETTING: {'selected_group': selected_group,
                 'selected_tag': selected_tag},
         }
         print(data)
@@ -190,8 +190,8 @@ class MainWindow(QMainWindow):
     def setupViews(self):
         '''create main views'''
         # separate widgets        
-        self.groupsTreeView = GroupTreeView(['GROUP']) # groups tree view        
-        self.tagsTableView = TagTableView(['key', 'Tag', 'Color']) # tags table view
+        self.groupsTreeView = GroupTreeView(['Group', 'Key']) # groups tree view        
+        self.tagsTableView = TagTableView(['KEY', 'TAG', 'COLOR']) # tags table view
         headers = ['Item Title', 'Group', 'Tags', 'Path', 'Create Date', 'Notes']
         self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView) # main table widget
 

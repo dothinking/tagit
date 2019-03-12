@@ -6,34 +6,25 @@ from PyQt5.QtCore import QModelIndex, Qt
 from .TreeModel import TreeItem, TreeModel
 
 class GroupItem(TreeItem):
-    def __init__(self, key, data, parent=None):
-        '''
-        :param key: unique key for category item
-                    - root item: key=0
-                    - default item: 1=<key<10
-                    - user defined item: key>=10
-        :param data: columns to show in tree
+
+    def __init__(self, data, parent=None):
+        '''       
+        :param data: columns of tree
         :param parent: parent item
         '''
         super(GroupItem, self).__init__(data, parent)
 
-        self._key = key
-
-    def key(self):
-        '''key of current item'''
-        return self._key
 
     def keys(self):
         '''all keys including children'''
-        groups = [self._key]
+        groups = [self.itemData[GroupModel.KEY]]
         for item in self.childItems:
             groups.extend(item.keys())
         return groups
 
-    def insertChildren(self, position, key, count, columns):
+    def insertChildren(self, position, count, columns):
         '''insert children with specified columns at sprcified position
         :param position: position to insert children
-        :param key: start key for the inserting items
         :param count: count of inserting items
         :param columns: count of columns of the inserting item
         '''
@@ -43,7 +34,7 @@ class GroupItem(TreeItem):
 
         for i, row in enumerate(range(count)):
             data = [None for v in range(columns)] # None by default
-            item = GroupItem(key+i, data, self)
+            item = GroupItem(data, self)
             self.childItems.insert(position, item)
         
         return True
@@ -72,77 +63,103 @@ class GroupItem(TreeItem):
 
     def serialize(self):
         '''store data'''
-        res = {'key': self._key, 'name': self.itemData[0]}
-        if self.childItems:
-            res['children'] = [child.serialize() for child in self.childItems]
-        return res
+        res = self.itemData[:] # copy
+        res.append([child.serialize() for child in self.childItems])
+
+        return res # key, name, children
 
 class GroupModel(TreeModel):
+
+    # KEY: unique key for each item
+    #    - root item: key=0
+    #    - default item: 1=<key<10
+    #    - user defined item: key>=10
+    # NAME: display name
+
+    NAME, KEY, CHILDREN = range(3)
+
+    # default groups
+    UNGROUPED, UNREFERENCED, ALLGROUPS = range(1,4)
+
     def __init__(self, header, parent=None):
         '''
-           :param headers: header of tree, e.g. ('name', 'value')
+           :param headers: header of tree, e.g. ['key', 'name']
            :param parent: parent object
         '''         
         # init model with root item only
-        rootItem = GroupItem(0, header) # root item
+        rootItem = GroupItem(header) # root item
         super(GroupModel, self).__init__(rootItem, parent)
 
-        self._currentKey = 9 # key for each item
-        self._saveRequired = False  # require saving if True
+        self.defaultGroups = [
+            ['Ungrouped', GroupModel.UNGROUPED, []],
+            ['Unreferenced', GroupModel.UNREFERENCED, []],
+            ['All Groups', GroupModel.ALLGROUPS, []]]
 
-        # item count for each group
-        self.itemsList = []
+        self.initData()
 
+
+    def initData(self):
+        # key for each item
+        self._currentKey = 9
+        # require saving if True
+        self._saveRequired = False  
+        # reference item count for each group
+        self.referenceList = []
 
     def setup(self, items=[], parent=None):
         '''setup model data for generating the tree
            :param items: list raw data for child items of parent, e.g.
-                        [{'key':.., 'name':.., 'children':[]}, {}, ...]
+                        [[key, name, [children]], ..., []]
            :param parent: parent item
         '''
+        if not items:
+            items = self.defaultGroups
+
         # reset data within beginResetModel() and endResetModel(),
         # so that these model data could be updated explicitly
         self.beginResetModel()        
-        self._currentKey = 9
-        self._saveRequired = False
+        self.initData()
         self._setupData(items, parent)
         self.endResetModel()
 
     def updateItems(self, items):
         '''items for counting'''
-        self.itemsList = items
+        self.referenceList = items
 
-    def _setupData(self, items=[], parent=None):
+    def _setupData(self, items, parent):
         '''setup model data for generating the tree
            :param items: list raw data for child items of parent, e.g.
-                        [{'key':.., 'name':.., 'children':[]}, {}, ...]
+                        [[name, key, [children]], ..., []]
            :param parent: parent item
         '''
         if not parent:
             parent = self.rootItem
 
         parent.reset()
-        for item in items:
+        for name, key, children in items:
             # append item
-            key = item.get('key')
-            parent.insertChildren(parent.childCount(), key, 1, 1)
-            if self._currentKey<key:
+            parent.insertChildren(parent.childCount(), 1, parent.columnCount())
+            if self._currentKey < key:
                 self._currentKey = key
-            # set name
-            currentItem = parent.child(parent.childCount() -1)
-            currentItem.setData(0, item.get('name'))
+            # set data
+            currentItem = parent.child(parent.childCount()-1)            
+            currentItem.setData(GroupModel.NAME, name)
+            currentItem.setData(GroupModel.KEY, key)
 
             # setup child items
-            self._setupData(item.get('children', []), currentItem)
+            self._setupData(children, currentItem)
 
-    def _nextKey(self):
+    def nextKey(self):
         '''next key for new item of this model'''
         self._currentKey += 1
         return self._currentKey
 
     def isDefaultItem(self, index):
         '''default item: 0<key<10'''
-        return not index.parent().isValid() and self._getItem(index).key()<10
+        if not index.isValid():
+            return True
+        key = self.index(index.row(), GroupModel.KEY, index.parent()).data()
+        return 0<key<10
 
     def saveRequired(self):
         return self._saveRequired
@@ -150,9 +167,9 @@ class GroupModel(TreeModel):
     def getIndexByKey(self, key, parent=QModelIndex()):
         '''get ModelIndex with specified key in the associated object'''
         for i in range(self.rowCount(parent)):
-            index = self.index(i, 0, parent)
-            if self._getItem(index).key() == key:
-                return index
+            index = self.index(i, GroupModel.KEY, parent)
+            if index.data() == key:
+                return self.index(index.row(), GroupModel.NAME, parent)
             else:
                 # attention
                 res = self.getIndexByKey(key, index) # found or QModelIndex()
@@ -176,17 +193,16 @@ class GroupModel(TreeModel):
             return Qt.NoItemFlags
 
         # default items should not be modified
-        item = self._getItem(index)
-        if 0<item.key()<10:
+        if self.isDefaultItem(index) or index.column()==GroupModel.KEY:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def insertRows(self, position, rows, parent=QModelIndex()):
         '''insert rows'''
-        parentItem = self._getItem(parent)
+        parentItem = self.getItem(parent)
         self.beginInsertRows(parent, position, position + rows - 1)
-        success = parentItem.insertChildren(position, self._nextKey(), rows, self.rootItem.columnCount())
+        success = parentItem.insertChildren(position, rows, self.rootItem.columnCount())
         self.endInsertRows()
 
         # flag for saving model
@@ -199,7 +215,7 @@ class GroupModel(TreeModel):
         '''remove rows starting from given position'''
         
         self.beginRemoveRows(parent, position, position+rows-1)
-        parentItem = self._getItem(parent)
+        parentItem = self.getItem(parent)
         success = parentItem.removeChildren(position, rows)
         self.endRemoveRows()
 
@@ -231,39 +247,39 @@ class GroupModel(TreeModel):
             return None
 
         # underlying data
-        group = self._getItem(index)
-        name = group.data(index.column())
+        row, col = index.row(), index.column()
+        group = self.getItem(index)
 
         # displaying
         if role == Qt.DisplayRole:
-            keys = group.keys()
-            count = 0 # count
+            if col == GroupModel.NAME:
+                keys, name = group.keys(), group.data(col)
+                count = 0 # count
 
-            # unreferenced items
-            if keys==[2]:
-                for item in self.itemsList:
-                    path = item[3]
-                    if not path or not os.path.exists(path):
-                        count += 1
-            # all items
-            elif keys==[3]:
-                count = len(self.itemsList)
-            # common items
-            else:                
-                for item in self.itemsList:
-                    if item[1] in keys:
-                        count += 1
-
-            return '{0} ({1})'.format(name, count) if count else name
+                # unreferenced items
+                if keys==[GroupModel.UNREFERENCED]:
+                    for item in self.referenceList:
+                        path = item[3]
+                        if not path or not os.path.exists(path):
+                            count += 1
+                # all items
+                elif keys==[GroupModel.ALLGROUPS]:
+                    count = len(self.referenceList)
+                # common items
+                else:                
+                    for item in self.referenceList:
+                        if item[1] in keys:
+                            count += 1
+                return '{0} ({1})'.format(name, count) if count else name
+            else:
+                return group.data(col)
 
         # editing
         elif role == Qt.EditRole:
-            return name
-
+            return group.data(col)
         else:
             return None       
             
-
     def setData(self, index, value, role=Qt.EditRole):
         '''edit item data with specified index
            dataChanged signal should be emitted explictly
@@ -272,7 +288,7 @@ class GroupModel(TreeModel):
             return False
 
         # edit item
-        item = self._getItem(index)
+        item = self.getItem(index)
         result = item.setData(index.column(), value)
 
         # emit signal if successed

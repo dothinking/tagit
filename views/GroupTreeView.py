@@ -16,12 +16,6 @@ class GroupTreeView(QTreeView):
         '''
         super(GroupTreeView, self).__init__(parent)
 
-        # init tree
-        self.resizeColumnToContents(0)
-        self.setAlternatingRowColors(True)
-        self.header().hide()
-        self.expandAll()
-
         # model
         self.sourceModel = GroupModel(header)
         self.setModel(self.sourceModel)
@@ -30,7 +24,21 @@ class GroupTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customContextMenu)
 
-    def setup(self, data=[], selected_key=2):
+        # table style
+        self.initTableStyle()
+
+    def initTableStyle(self):
+        # tree style
+        self.resizeColumnToContents(0)
+        self.setAlternatingRowColors(True)
+        self.header().hide()
+        self.expandAll()
+
+        self.setSelectionMode(QTreeView.SingleSelection)
+        self.setSelectionBehavior(QTreeView.SelectRows)
+
+
+    def setup(self, data=[], selected_key=GroupModel.ALLGROUPS):
         '''reset tree with specified model data,
            and set the item with specified key as selected
         '''
@@ -40,10 +48,10 @@ class GroupTreeView(QTreeView):
         self.reset()
         self.expandAll()
 
-        # set selected item
+        # set selected item        
         index = self.sourceModel.getIndexByKey(selected_key)
         if index.isValid():
-            self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+            self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
 
     def customContextMenu(self, position):
         '''show context menu'''
@@ -67,7 +75,7 @@ class GroupTreeView(QTreeView):
 
     def slot_insertChild(self):
         '''insert child item under current selected item'''
-        index = self.selectionModel().currentIndex()
+        index = self.selectionModel().selectedRows(self.sourceModel.KEY)[0]
 
         # could not insert sub-items to default items
         if self.sourceModel.isDefaultItem(index):
@@ -75,20 +83,24 @@ class GroupTreeView(QTreeView):
 
         # insert
         if self.sourceModel.insertRow(0, index):
-            child = self.sourceModel.index(0, 0, index)
-            self.sourceModel.setData(child, "[Sub Group]")
-            self.selectionModel().setCurrentIndex(child, QItemSelectionModel.ClearAndSelect)
+            child_name = self.sourceModel.index(0, self.sourceModel.NAME, index)
+            child_key = self.sourceModel.index(0, self.sourceModel.KEY, index)
+            self.sourceModel.setData(child_name, "[Sub Group]")
+            self.sourceModel.setData(child_key, self.sourceModel.nextKey())            
+            self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
 
     def slot_insertRow(self):
         '''inset item at the same level with current selected item'''
-        index = self.selectionModel().currentIndex()
+        index = self.selectionModel().selectedRows(self.sourceModel.KEY)[0]
 
         # could not prepend item to default items
         row = 3 if self.sourceModel.isDefaultItem(index) else index.row() + 1
         if self.sourceModel.insertRow(row, index.parent()):
-            child = self.sourceModel.index(row, 0, index.parent())
-            self.sourceModel.setData(child, "[New Group]")
-            self.selectionModel().setCurrentIndex(child, QItemSelectionModel.ClearAndSelect)
+            child_name = self.sourceModel.index(row, self.sourceModel.NAME, index.parent())
+            child_key = self.sourceModel.index(row, self.sourceModel.KEY, index.parent())            
+            self.sourceModel.setData(child_name, "[New Group]")
+            self.sourceModel.setData(child_key, self.sourceModel.nextKey())            
+            self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
 
     def slot_removeRow(self):
         '''delete selected item'''
@@ -116,3 +128,4 @@ class GroupTreeView(QTreeView):
            :param items: the latest items list
         '''
         self.sourceModel.updateItems(items)
+        self.sourceModel.layoutChanged.emit() # update display immediately
