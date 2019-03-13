@@ -68,6 +68,9 @@ class MainMenu(object):
         # item counter for group, tag
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.groupsView().slot_updateCounter)
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.tagsView().slot_updateCounter)
+
+        # show source path for selected item
+        self.mainWindow.itemsView().clicked.connect(self.slot_showReferencePath)
         
 
 
@@ -141,6 +144,7 @@ class MainMenu(object):
         self.editToolBar.addAction(self.mapActions['new item'])
         self.editToolBar.addAction(self.mapActions['edit item'])
         self.editToolBar.addAction(self.mapActions['remove item'])
+        self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['open reference'])
         self.editToolBar.addAction(self.mapActions['comments'])
         self.editToolBar.addSeparator()
@@ -223,3 +227,8 @@ class MainMenu(object):
                 return False
 
         return True
+
+    def slot_showReferencePath(self, index):
+        '''show reference path in status bar when selected'''
+        path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
+        self.mainWindow.statusBar().showMessage(path_index.data())
