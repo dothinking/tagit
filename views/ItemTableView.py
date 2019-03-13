@@ -147,7 +147,7 @@ class ItemTableView(QTableView):
 
         menu.addSeparator()
         menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
-        menu.addAction(self.tr("Comments"), self.slot_navigateTo)
+        menu.addAction(self.tr("Comments"), self.slot_comment)
 
         # menus on groups
         menu.addSeparator()
@@ -203,6 +203,15 @@ class ItemTableView(QTableView):
             return
         path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def slot_comment(self):
+        '''edit comment for current item'''
+        index = self.selectionModel().currentIndex()
+        if not index.isValid():
+            return
+        path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
+        self.parent().widget(1).setText(path)
+        self.parent().setCurrentIndex(1) # comment widget
 
     def slot_removeRows(self):
         '''delete selected item'''

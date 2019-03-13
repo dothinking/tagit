@@ -1,8 +1,6 @@
 from PyQt5.QtCore import Qt, QSettings
-from PyQt5.QtGui import (QIcon, QKeySequence)
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QTabWidget, QAction, 
-    QFileDialog, QMainWindow, QMessageBox, QSplitter)
+from PyQt5.QtWidgets import (QApplication, QWidget, QTabWidget, QAction, QDockWidget,
+    QFileDialog, QMainWindow, QMessageBox, QSplitter, QTextEdit, QStackedWidget)
 
 import os
 import pickle
@@ -58,6 +56,12 @@ class MainWindow(QMainWindow):
 
     def itemsView(self):
         return self.itemsTableView
+
+    def propertyView(self):
+        return self.dockProperty
+
+    def commentView(self):
+        return self.commentWidget
 
     def database(self):
         return self._database 
@@ -189,23 +193,36 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------
     def setupViews(self):
         '''create main views'''
-        # separate widgets        
-        self.groupsTreeView = GroupTreeView(['Group', 'Key']) # groups tree view        
-        self.tagsTableView = TagTableView(['KEY', 'TAG', 'COLOR']) # tags table view
+        # left widgets
+        tabWidget = QTabWidget()
+        self.groupsTreeView = GroupTreeView(['Group', 'Key'], tabWidget) # groups tree view        
+        self.tagsTableView = TagTableView(['KEY', 'TAG', 'COLOR'], tabWidget) # tags table view
+        tabWidget.addTab(self.groupsTreeView, "Groups")
+        tabWidget.addTab(self.tagsTableView, "Tags")
+
+        # central widgets
+        stackedWidget = QStackedWidget()
         headers = ['Item Title', 'Group', 'Tags', 'Path', 'Create Date', 'Notes']
-        self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView) # main table widget
+        self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView, stackedWidget) # main table widget
+        self.commentWidget = QTextEdit(stackedWidget)        
+        stackedWidget.addWidget(self.itemsTableView)
+        stackedWidget.addWidget(self.commentWidget)
 
         # arranged views
-        self.tabWidget = QTabWidget()
-        self.tabWidget.addTab(self.groupsTreeView, "Groups")
-        self.tabWidget.addTab(self.tagsTableView, "Tags")
-
         splitter = QSplitter()        
-        splitter.addWidget(self.tabWidget)
-        splitter.addWidget(self.itemsTableView)
+        splitter.addWidget(tabWidget)
+        splitter.addWidget(stackedWidget)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         self.setCentralWidget(splitter)
+
+        # dock widgets
+        self.dockProperty = QDockWidget(self.tr("Properties"),self)
+        self.dockProperty.setFeatures(QDockWidget.DockWidgetClosable)  
+        self.dockProperty.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.dockProperty.setWidget(QTextEdit())
+        self.addDockWidget(Qt.RightDockWidgetArea, self.dockProperty)
+
 
     def createMainMenu(self):
         '''main menu'''

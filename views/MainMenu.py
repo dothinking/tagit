@@ -59,7 +59,7 @@ class MainMenu(object):
         # filter items
         self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.mainWindow.itemsView().slot_filterByGroup)
         self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.mainWindow.itemsView().slot_filterByTag)
-        self.mainWindow.tabWidget.currentChanged.connect(self.refreshItems)
+        self.mainWindow.groupsView().parent().currentChanged.connect(self.refreshItems) # tabwidget
 
         # edit items triggered by removing group or tag
         self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
@@ -69,8 +69,13 @@ class MainMenu(object):
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.groupsView().slot_updateCounter)
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.tagsView().slot_updateCounter)
 
-        # show source path for selected item
-        self.mainWindow.itemsView().clicked.connect(self.slot_showReferencePath)
+        # show item properties: source path, detail property
+        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_showReferencePath)
+        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_showProperties)
+
+        # switch from comment view to item view
+        self.mainWindow.groupsView().clicked.connect(lambda: self.mainWindow.itemsView().parent().setCurrentIndex(0))
+        self.mainWindow.tagsView().clicked.connect(lambda: self.mainWindow.itemsView().parent().setCurrentIndex(0))
         
 
 
@@ -228,7 +233,20 @@ class MainMenu(object):
 
         return True
 
-    def slot_showReferencePath(self, index):
+    def slot_showReferencePath(self, selection):
         '''show reference path in status bar when selected'''
-        path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
+        for index in selection.indexes():
+            path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
+            break
+        else:
+            return
         self.mainWindow.statusBar().showMessage(path_index.data())
+
+    def slot_showProperties(self, selection):
+        '''show detailed information the current item'''
+        for index in selection.indexes():
+            name_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.NAME)
+            break
+        else:
+            return
+        self.mainWindow.propertyView().widget().setText(name_index.data())
