@@ -2,7 +2,7 @@
 # 
 from PyQt5.QtCore import QFileInfo
 from PyQt5.QtGui import (QIcon, QKeySequence)
-from PyQt5.QtWidgets import (QApplication, QFileDialog, QMessageBox, QAction)
+from PyQt5.QtWidgets import (QApplication, QFileDialog, QMessageBox, QAction, QDockWidget)
 
 
 class MainMenu(object):
@@ -28,13 +28,12 @@ class MainMenu(object):
                 ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
                 (),
                 ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_attachment.png', 'Open attached reference'),
-                ('Comments', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+M', 'item_comments.png', 'Edit/view comments on current item'),
                 (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
                 ('Remove Group', self.mainWindow.groupsView().slot_removeRow, None, 'del_group.png','Delete selected group'),
                 (),
-                ('New Tag', self.mainWindow.tagsView().slot_insertRow,'Ctrl+T', 'tag.png', 'Create tag'),
+                ('New Tag', self.mainWindow.tagsView().slot_insertRow, 'Ctrl+T', 'tag.png', 'Create tag'),
                 ('Remove Tag', self.mainWindow.tagsView().slot_removeRow, None, 'del_tag','Delete selected tag'),
             ]),
             ('&View', []),
@@ -48,38 +47,43 @@ class MainMenu(object):
         ]
         self.mapActions = {} # name -> action/menu
         path = QFileInfo(__file__).absolutePath()
-        self.img_path = QFileInfo(path).absolutePath() + '/images/'
+        self.img_path = QFileInfo(path).absolutePath() + '/images/'       
+        
 
-        # menu status
-        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
-        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.refreshMenus)
-        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.refreshMenus)
-        QApplication.instance().focusChanged.connect(self.refreshMenus)
-
-        # filter items
-        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.mainWindow.itemsView().slot_filterByGroup)
-        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.mainWindow.itemsView().slot_filterByTag)
-        self.mainWindow.groupsView().parent().currentChanged.connect(self.refreshItems) # tabwidget
-
-        # edit items triggered by removing group or tag
+        # group view signals
+        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.slot_selected_group_changed)
         self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
+
+        # tag view signals
+        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.slot_selected_tag_changed)
         self.mainWindow.tagsView().tagRemoved.connect(self.mainWindow.itemsView().slot_untagItems)
 
-        # item counter for group, tag
+        # preference item signals
+        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_selected_item_changed)
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.groupsView().slot_updateCounter)
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.tagsView().slot_updateCounter)
 
-        # show item properties: source path, detail property
-        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_showReferencePath)
-        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_showProperties)
-
-        # switch from comment view to item view
-        self.mainWindow.groupsView().clicked.connect(lambda: self.mainWindow.itemsView().parent().setCurrentIndex(0))
-        self.mainWindow.tagsView().clicked.connect(lambda: self.mainWindow.itemsView().parent().setCurrentIndex(0))
-        
+        # other signals
+        QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
+        self.mainWindow.groupsView().parent().currentChanged.connect(self.refreshItems) # tabwidget
 
 
-    def createMenus(self, parent=None, config=None):
+    # ---------------------------------------------------
+    # menus and actions
+    # ---------------------------------------------------
+
+    def createMenus(self):
+        '''init menus: common menus + dock widget view menu'''
+        # common menu from config dict
+        self.createMenusFromConfig()
+
+        # add widget converted menu
+        self.dockAction = self.mainWindow.propertyView().toggleViewAction()
+        self.dockAction.setIcon(QIcon(self.img_path+'item_comments.png'))
+        self.mapActions['view'].addAction(self.dockAction)
+
+
+    def createMenusFromConfig(self, parent=None, config=None):
         '''init menu
            :param config: data for creating menus, e.g.
                   - menu: (text, [sub actions])
@@ -97,7 +101,7 @@ class MainMenu(object):
             else:
                 if isinstance(menu_item[1], list): # menu
                     action = parent.addMenu(menu_item[0])
-                    self.createMenus(action, menu_item[1])
+                    self.createMenusFromConfig(action, menu_item[1])
                 else:
                     action = self.createAction(*menu_item)
                     parent.addAction(action)
@@ -110,22 +114,26 @@ class MainMenu(object):
         '''set enable status of menu actions'''
         # groups menu
         group_activated = self.mainWindow.groupsView().hasFocus()
-        group_selected = not self.mainWindow.groupsView().selectionModel().selection().isEmpty()
-        group_default = False
-        if group_selected:
-            i_index = self.mainWindow.groupsView().selectionModel().currentIndex()
-            group_default = self.mainWindow.groupsView().model().isDefaultItem(i_index)
+        for index in self.mainWindow.groupsView().selectedIndexes():
+            group_selected = True
+            group_default = self.mainWindow.groupsView().model().isDefaultItem(index)
+            break
+        else:
+            group_selected = False
+            group_default = False
         self.mapActions['new group'].setEnabled(group_activated and group_selected)
         self.mapActions['new sub-group'].setEnabled(group_activated and group_selected and not group_default)
         self.mapActions['remove group'].setEnabled(group_activated and group_selected and not group_default)
 
         # tags menu
         tag_activated = self.mainWindow.tagsView().hasFocus()
-        tag_selected = not self.mainWindow.tagsView().selectionModel().selection().isEmpty()
-        tag_default = False
-        if tag_selected:
-            i_index = self.mainWindow.tagsView().selectionModel().currentIndex()
-            tag_default = self.mainWindow.tagsView().model().isDefaultItem(i_index)
+        for index in self.mainWindow.tagsView().selectedIndexes():
+            tag_selected = True
+            tag_default = self.mainWindow.tagsView().model().isDefaultItem(index)
+            break
+        else:
+            tag_selected = False
+            tag_default = False
         self.mapActions['new tag'].setEnabled(tag_activated and tag_selected)
         self.mapActions['remove tag'].setEnabled(tag_activated and tag_selected and not tag_default)
 
@@ -135,23 +143,21 @@ class MainMenu(object):
         self.mapActions['edit item'].setEnabled(item_activated and item_selected)
         self.mapActions['remove item'].setEnabled(item_activated and item_selected)
         self.mapActions['open reference'].setEnabled(item_activated and item_selected)
-        self.mapActions['comments'].setEnabled(item_activated and item_selected)
 
     def createToolBars(self):
         '''create tool bar based on menu items'''
         # files
-        self.fileToolBar = self.mainWindow.addToolBar("File")
+        self.fileToolBar = self.mainWindow.addToolBar('File')
         self.fileToolBar.addAction(self.mapActions['new'])
         self.fileToolBar.addAction(self.mapActions['open'])
         self.fileToolBar.addAction(self.mapActions['save'])
 
-        self.editToolBar = self.mainWindow.addToolBar("Edit")
+        self.editToolBar = self.mainWindow.addToolBar('Edit')
         self.editToolBar.addAction(self.mapActions['new item'])
         self.editToolBar.addAction(self.mapActions['edit item'])
         self.editToolBar.addAction(self.mapActions['remove item'])
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['open reference'])
-        self.editToolBar.addAction(self.mapActions['comments'])
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new group'])
         self.editToolBar.addAction(self.mapActions['new sub-group'])
@@ -160,19 +166,29 @@ class MainMenu(object):
         self.editToolBar.addAction(self.mapActions['new tag'])
         self.editToolBar.addAction(self.mapActions['remove tag'])
 
+        self.viewToolBar = self.mainWindow.addToolBar('View')
+        self.viewToolBar.addAction(self.dockAction)
+
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False):
+        # create action from text or convert from dock view        
         action = QAction(text, self.mainWindow)
+
         if icon:            
             action.setIcon(QIcon(self.img_path+icon))
+
         if shortcut:
             action.setShortcut(shortcut)
+
         if tip:
             action.setToolTip(tip)
             action.setStatusTip(tip)
+
         if slot:
             action.triggered.connect(slot)
+
         if checkable:
             action.setCheckable(True)
+
         return action
 
     def refreshItems(self, index):
@@ -233,20 +249,62 @@ class MainMenu(object):
 
         return True
 
-    def slot_showReferencePath(self, selection):
-        '''show reference path in status bar when selected'''
-        for index in selection.indexes():
+
+    # ---------------------------------------------------
+    # slots for main widgets
+    # ---------------------------------------------------
+
+    def slot_selected_group_changed(self, current, previous):
+        '''
+        :param current: current selections, list of QModelIndex
+        :param previous: previous selections
+        '''
+        # refresh menu status
+        self.refreshMenus()
+
+        # filter reference items by gruop
+        for index in current.indexes():
+            break
+        else:
+            return
+        self.mainWindow.itemsView().slot_filterByGroup(index)
+
+    def slot_selected_tag_changed(self, current, previous):
+        '''
+        :param current: current selections, list of QModelIndex
+        :param previous: previous selections
+        '''
+        # refresh menu status
+        self.refreshMenus()
+
+        # filter reference items by tag
+        for index in current.indexes():
+            break
+        else:
+            return
+        self.mainWindow.itemsView().slot_filterByTag(index)
+
+    def slot_selected_item_changed(self, current, previous):
+        '''
+        :param current: current selections, list of QModelIndex
+        :param previous: previous selections
+        '''
+        # refresh menu status
+        self.refreshMenus()
+
+        # show path of current reference item in status bar
+        for index in current.indexes():
             path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
             break
         else:
             return
         self.mainWindow.statusBar().showMessage(path_index.data())
 
-    def slot_showProperties(self, selection):
-        '''show detailed information the current item'''
-        for index in selection.indexes():
+        # show detailed information of current item in dock view
+        for index in current.indexes():
             name_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.NAME)
             break
         else:
             return
         self.mainWindow.propertyView().widget().setText(name_index.data())
+

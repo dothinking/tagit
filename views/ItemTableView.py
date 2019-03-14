@@ -46,6 +46,9 @@ class ItemTableView(QTableView):
             lambda: self.itemsChanged.emit(self.sourceModel.serialize(save=False))
             )
 
+        # doule click to open source path
+        self.doubleClicked.connect(self.slot_navigateTo)
+
         # table style
         self.initTableStyle()
 
@@ -58,6 +61,9 @@ class ItemTableView(QTableView):
 
         self.setSelectionBehavior(QTableView.SelectRows)
         self.setAlternatingRowColors(True)
+
+        # not editable
+        self.setEditTriggers(QTableView.NoEditTriggers)
 
         # sorting
         self.setSortingEnabled(True)
@@ -147,7 +153,6 @@ class ItemTableView(QTableView):
 
         menu.addSeparator()
         menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
-        menu.addAction(self.tr("Comments"), self.slot_comment)
 
         # menus on groups
         menu.addSeparator()
@@ -203,15 +208,6 @@ class ItemTableView(QTableView):
             return
         path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
-
-    def slot_comment(self):
-        '''edit comment for current item'''
-        index = self.selectionModel().currentIndex()
-        if not index.isValid():
-            return
-        path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
-        self.parent().widget(1).setText(path)
-        self.parent().setCurrentIndex(1) # comment widget
 
     def slot_removeRows(self):
         '''delete selected item'''
@@ -282,28 +278,40 @@ class ItemTableView(QTableView):
                 keys.pop(keys.index(key))
                 self.sourceModel.setData(index, keys)        
 
-    def slot_filterByGroup(self):
-        '''triggered by group selection changed'''
+    def slot_filterByGroup(self, groupIndex=None):
+        '''triggered by group selection changed
+        :param groupIndex: currently selected group by default
+        '''
+        if not groupIndex:
+            for groupIndex in self.groupView.selectedIndexes():
+                break
+            else:
+                return
+
         # get selected group
-        for index in self.groupView.selectedIndexes():
-            groups = index.internalPointer().keys()
-            break
-        else:
-            groups = None       
+        groups = groupIndex.internalPointer().keys()
 
         # set filter for column GROUP
         self.proxyModel.setGroupFilter(groups)
         self.proxyModel.setFilterKeyColumn(ItemModel.GROUP)
 
-    def slot_filterByTag(self):
+        # clear previous selection
+        self.selectionModel().clear() 
+
+    def slot_filterByTag(self, tagIndex=None):
         '''triggered by tag selection changed'''
-        # get selected tag
-        for index in self.tagView.selectedIndexes():
-            tag = index.siblingAtColumn(self.tagView.model().KEY).data()
-            break
-        else:
-            tag = None       
+        if not tagIndex:
+            for tagIndex in self.tagView.selectedIndexes():
+                break
+            else:
+                return
+
+        # selected tag key
+        tag = tagIndex.siblingAtColumn(self.tagView.model().KEY).data()
 
         # set filter for column GROUP
         self.proxyModel.setTagFilter(tag)
         self.proxyModel.setFilterKeyColumn(ItemModel.TAGS)
+
+        # clear previous selection
+        self.selectionModel().clear() 

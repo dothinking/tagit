@@ -51,7 +51,16 @@ class GroupTreeView(QTreeView):
         # set selected item        
         index = self.sourceModel.getIndexByKey(selected_key)
         if index.isValid():
+            self.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
             self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
+
+    def selectedIndex(self):
+        '''get currently selected index'''
+        for index in self.selectedIndexes():
+            return index
+        else:
+            QMessageBox.warning(self, 'Warning', self.tr("Please select a group first"))
+            return None
 
     def customContextMenu(self, position):
         '''show context menu'''
@@ -75,7 +84,9 @@ class GroupTreeView(QTreeView):
 
     def slot_insertChild(self):
         '''insert child item under current selected item'''
-        index = self.selectionModel().selectedRows(self.sourceModel.KEY)[0]
+        index = self.selectedIndex()
+        if not index:
+            return
 
         # could not insert sub-items to default items
         if self.sourceModel.isDefaultItem(index):
@@ -91,7 +102,9 @@ class GroupTreeView(QTreeView):
 
     def slot_insertRow(self):
         '''inset item at the same level with current selected item'''
-        index = self.selectionModel().selectedRows(self.sourceModel.KEY)[0]
+        index = self.selectedIndex()
+        if not index:
+            return
 
         # could not prepend item to default items
         row = 3 if self.sourceModel.isDefaultItem(index) else index.row() + 1
@@ -104,12 +117,14 @@ class GroupTreeView(QTreeView):
 
     def slot_removeRow(self):
         '''delete selected item'''
-        index = self.selectionModel().currentIndex()
+        index = self.selectedIndex()
+        if not index:
+            return
 
         reply = QMessageBox.question(self, 'Confirm', self.tr(
-            "Confirm to remove '{0}'?\n"
-            "The items under this group will not be deleted,"
-            " but moved to Ungrouped.".format(index.data())), 
+            "Confirm to remove '{0}' and all sub-groups under this group?\n"
+            "The reference items under this group will not be deleted,"
+            " but moved to UNGROUPED.".format(index.data(Qt.EditRole))), 
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply != QMessageBox.Yes:

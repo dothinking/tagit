@@ -24,10 +24,7 @@ class ItemModel(TableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        if index.column() != ItemModel.NAME:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
  
 class SortFilterProxyModel(QSortFilterProxyModel):
 

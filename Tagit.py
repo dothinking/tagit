@@ -60,9 +60,6 @@ class MainWindow(QMainWindow):
     def propertyView(self):
         return self.dockProperty
 
-    def commentView(self):
-        return self.commentWidget
-
     def database(self):
         return self._database 
 
@@ -114,12 +111,12 @@ class MainWindow(QMainWindow):
         selected_group = data.get(self.KEY_SETTING, {}).get('selected_group', GroupModel.ALLGROUPS)
         selected_tag = data.get(self.KEY_SETTING, {}).get('selected_tag', TagModel.NOTAG)
 
-        # init groups tree view        
+        # init groups tree view 
         self.groupsTreeView.setup(groups, selected_group)
         self.groupsTreeView.model().updateItems(items)
         self.groupsTreeView.setColumnHidden(GroupModel.KEY, True)
 
-        # init tags table view        
+        # init tags table view
         self.tagsTableView.setup(tags, selected_tag)
         self.tagsTableView.model().updateItems(items)
         self.tagsTableView.setColumnHidden(TagModel.KEY, True) # hide first column -> key
@@ -193,6 +190,7 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------
     def setupViews(self):
         '''create main views'''
+
         # left widgets
         tabWidget = QTabWidget()
         self.groupsTreeView = GroupTreeView(['Group', 'Key'], tabWidget) # groups tree view        
@@ -200,18 +198,14 @@ class MainWindow(QMainWindow):
         tabWidget.addTab(self.groupsTreeView, "Groups")
         tabWidget.addTab(self.tagsTableView, "Tags")
 
-        # central widgets
-        stackedWidget = QStackedWidget()
+        # central widgets: reference item table widget
         headers = ['Item Title', 'Group', 'Tags', 'Path', 'Create Date', 'Notes']
-        self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView, stackedWidget) # main table widget
-        self.commentWidget = QTextEdit(stackedWidget)        
-        stackedWidget.addWidget(self.itemsTableView)
-        stackedWidget.addWidget(self.commentWidget)
+        self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView) 
 
         # arranged views
         splitter = QSplitter()        
         splitter.addWidget(tabWidget)
-        splitter.addWidget(stackedWidget)
+        splitter.addWidget(self.itemsTableView)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         self.setCentralWidget(splitter)
