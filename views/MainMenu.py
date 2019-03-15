@@ -24,7 +24,6 @@ class MainMenu(object):
             ]),
             ('&Edit',[
                 ('New Item', self.mainWindow.itemsView().slot_appendRow,'Ctrl+I', 'item.png', 'Create item'),
-                ('Edit Item', None, None, 'edit_item.png', 'Edit item'),
                 ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
                 (),
                 ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_attachment.png', 'Open attached reference'),
@@ -80,6 +79,8 @@ class MainMenu(object):
         # add widget converted menu
         self.dockAction = self.mainWindow.propertyView().toggleViewAction()
         self.dockAction.setIcon(QIcon(self.img_path+'item_comments.png'))
+        self.dockAction.setToolTip('Edit reference item')
+        self.dockAction.setStatusTip('Edit reference item')
         self.mapActions['view'].addAction(self.dockAction)
 
 
@@ -140,7 +141,6 @@ class MainMenu(object):
         # items menu
         item_activated = self.mainWindow.itemsView().hasFocus()
         item_selected = not self.mainWindow.itemsView().selectionModel().selection().isEmpty()
-        self.mapActions['edit item'].setEnabled(item_activated and item_selected)
         self.mapActions['remove item'].setEnabled(item_activated and item_selected)
         self.mapActions['open reference'].setEnabled(item_activated and item_selected)
 
@@ -154,7 +154,6 @@ class MainMenu(object):
 
         self.editToolBar = self.mainWindow.addToolBar('Edit')
         self.editToolBar.addAction(self.mapActions['new item'])
-        self.editToolBar.addAction(self.mapActions['edit item'])
         self.editToolBar.addAction(self.mapActions['remove item'])
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['open reference'])
@@ -292,19 +291,27 @@ class MainMenu(object):
         # refresh menu status
         self.refreshMenus()
 
-        # show path of current reference item in status bar
+        # current index
         for index in current.indexes():
-            path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
             break
         else:
-            return
-        self.mainWindow.statusBar().showMessage(path_index.data())
+            index = None
+
+        # show path of current reference item in status bar
+        if index:
+            path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
+            path = path_index.data()
+        else:
+            path = ''
+        self.mainWindow.statusBar().showMessage(path)
 
         # show detailed information of current item in dock view
-        for index in current.indexes():
+        if index:
             name_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.NAME)
-            break
+            note_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.NOTES)
+            name = name_index.data()
+            note = note_index.data()
         else:
-            return
-        self.mainWindow.propertyView().widget().setText(name_index.data())
-
+            name = ''
+            note = ''
+        self.mainWindow.propertyView().widget().setup(index, (name, path, note))

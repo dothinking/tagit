@@ -9,6 +9,7 @@ from views.MainMenu import MainMenu
 from views.GroupTreeView import GroupTreeView
 from views.TagTableView import TagTableView
 from views.ItemTableView import ItemTableView
+from views.PropertyWidget import PropertyWidget
 
 from models.GroupModel import GroupModel
 from models.TagModel import TagModel
@@ -211,11 +212,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(splitter)
 
         # dock widgets
+        propWidget = PropertyWidget(self.itemsTableView)
         self.dockProperty = QDockWidget(self.tr("Properties"),self)
-        self.dockProperty.setFeatures(QDockWidget.DockWidgetClosable)  
-        self.dockProperty.setAllowedAreas(Qt.RightDockWidgetArea)
-        self.dockProperty.setWidget(QTextEdit())
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dockProperty)
+        self.dockProperty.setWidget(propWidget)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.dockProperty)
 
 
     def createMainMenu(self):

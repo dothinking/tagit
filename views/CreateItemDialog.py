@@ -1,5 +1,4 @@
-# editable table view for tags:
-# insert, remove, edit color
+# create reference items dialog
 # 
 
 import os
@@ -13,8 +12,8 @@ class CreateItemDialog(QDialog):
         super(CreateItemDialog, self).__init__(parent)
 
         # labels
-        fileLabel = QLabel("Referenced object")
-        nameLabel = QLabel("Description name")
+        fileLabel = QLabel("Source path")
+        nameLabel = QLabel("Item name")
 
         # line edit
         self.refEdit = QLineEdit()
@@ -51,7 +50,7 @@ class CreateItemDialog(QDialog):
         mainLayout.addWidget(buttons, 3, 2)        
         self.setLayout(mainLayout)
 
-        self.setWindowTitle("Create Item")
+        self.setWindowTitle("Create Reference Item")
 
     def browse(self):
         if self.radio1.isChecked():
@@ -65,9 +64,9 @@ class CreateItemDialog(QDialog):
 
     def accept(self):
         if not self.refEdit.text() or not self.nameEdit.text():
-            QMessageBox.warning(self, 'Warning', 'Name and referenced object are required.')
+            QMessageBox.warning(self, 'Warning', 'Reference source path and name are required.')
         elif not os.path.exists(self.refEdit.text()):
-            QMessageBox.warning(self, 'Warning', 'Referenced object is invalid, please check the path.')
+            QMessageBox.warning(self, 'Warning', 'Referenced source is invalid, please check the path.')
         else:
             super(CreateItemDialog, self).accept()
 

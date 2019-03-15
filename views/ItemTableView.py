@@ -94,10 +94,12 @@ class ItemTableView(QTableView):
             # group information
             name, key, children = item
 
-            # create menu action, but skip current group
-            if key not in keys:                
-                action = menu.addAction(name, self.slot_moveGroup)
-                action.key = key
+            # create menu action, but skip specified groups
+            action = menu.addAction(name, self.slot_moveGroup)
+            action.key = key
+
+            if key in keys:
+                action.setEnabled(False)
 
             # create menu if children items exist
             if children:
@@ -148,7 +150,6 @@ class ItemTableView(QTableView):
 
         # edit item
         menu.addAction(self.tr("New Item"), self.slot_appendRow)
-        menu.addAction(self.tr("Edit Item"), self.slot_editRow)
         menu.addAction(self.tr("Remove Item"), self.slot_removeRows)
 
         menu.addSeparator()
@@ -196,9 +197,6 @@ class ItemTableView(QTableView):
                 for i, data in enumerate(row_data):
                     index = self.sourceModel.index(num_row, i)
                     self.sourceModel.setData(index, data)
-
-    def slot_editRow(self):
-        pass
 
 
     def slot_navigateTo(self):
