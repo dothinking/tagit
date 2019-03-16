@@ -109,8 +109,11 @@ class MainWindow(QMainWindow):
         tags = data.get(self.KEY_TAG, [])
         items = data.get(self.KEY_ITEM, [])
 
-        selected_group = data.get(self.KEY_SETTING, {}).get('selected_group', GroupModel.ALLGROUPS)
-        selected_tag = data.get(self.KEY_SETTING, {}).get('selected_tag', TagModel.NOTAG)
+        # settings
+        settings = data.get(self.KEY_SETTING, {})
+        selected_group = settings.get('selected_group', GroupModel.ALLGROUPS)
+        selected_tag = settings.get('selected_tag', TagModel.NOTAG)
+        selected_style = settings.get('selected_style', None)
 
         # init groups tree view 
         self.groupsTreeView.setup(groups, selected_group)
@@ -128,6 +131,9 @@ class MainWindow(QMainWindow):
         self.itemsTableView.setColumnHidden(ItemModel.TAGS, True)
         self.itemsTableView.setColumnHidden(ItemModel.PATH, True)
         self.itemsTableView.setColumnHidden(ItemModel.NOTES, True)
+
+        # set style sheet
+        self.main_menu.setStyleSheet(selected_style)
 
     def closeEvent(self, event):
         '''default method called when trying to close the app'''
@@ -166,8 +172,11 @@ class MainWindow(QMainWindow):
             self.KEY_GROUP  : self.groupsTreeView.model().serialize(),
             self.KEY_TAG    : self.tagsTableView.model().serialize(),
             self.KEY_ITEM   : self.itemsTableView.model().sourceModel().serialize(),
-            self.KEY_SETTING: {'selected_group': selected_group,
-                'selected_tag': selected_tag},
+            self.KEY_SETTING: {
+                'selected_group': selected_group,
+                'selected_tag': selected_tag,
+                'selected_style': self.main_menu.getCurrentSheetStyle(),
+            },
         }
         print(data)
 

@@ -1,6 +1,8 @@
 # main menu bar and associated toolber for the app
 # 
-from PyQt5.QtCore import QFileInfo
+import os
+from functools import partial
+
 from PyQt5.QtGui import (QIcon, QKeySequence)
 from PyQt5.QtWidgets import (QApplication, QFileDialog, QMessageBox, QAction, QDockWidget)
 
@@ -9,6 +11,9 @@ class MainMenu(object):
     """main menu and toolbox for main window"""
     def __init__(self, parent):
         self.mainWindow = parent
+        scriptPath = os.path.dirname(os.path.abspath(__file__))
+        self._rootPath = os.path.dirname(scriptPath)
+        self._styleSheet = None
 
         # menu: (text, [sub actions])
         # action: (text, slot, shortcut, icon, tips)
@@ -35,19 +40,14 @@ class MainMenu(object):
                 ('New Tag', self.mainWindow.tagsView().slot_insertRow, 'Ctrl+T', 'tag.png', 'Create tag'),
                 ('Remove Tag', self.mainWindow.tagsView().slot_removeRow, None, 'del_tag','Delete selected tag'),
             ]),
-            ('&View', []),
+            ('&View', [
+                ('Style', self.getStyleSheetNames())
+            ]),
             ('&Help',[
-                ('About',None,None,None,None),
-                ('Test', [
-                    ('Test1',None,None,None,'hiaha, test1'),
-                    ('Test2',None,None,None,'hiaha, test2'),
-                ])
+                ('About', self.about, None, None, None),
             ])
         ]
         self.mapActions = {} # name -> action/menu
-        path = QFileInfo(__file__).absolutePath()
-        self.img_path = QFileInfo(path).absolutePath() + '/images/'       
-        
 
         # group view signals
         self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.slot_selected_group_changed)
@@ -70,6 +70,24 @@ class MainMenu(object):
     # ---------------------------------------------------
     # menus and actions
     # ---------------------------------------------------
+    def getStyleSheetNames(self):
+        qss_path = '{0}/qss/'.format(self._rootPath)
+        # style sheets
+        sheets = []
+        for filename in os.listdir(qss_path):
+            qss_file = os.path.join(qss_path, filename)
+            if filename.endswith('.qss') and os.path.isfile(qss_file):
+                sheets.append(filename[0:-4])
+        # menu items
+        res = []
+        for name in sheets:
+            qss_file = '{0}/{1}.qss'.format(qss_path, name)
+            res.append((
+                name, 
+                partial(self.setStyleSheet, qss_file), 
+                None, None, 
+                'Apply style sheet {0}.qss under path {1}'.format(name, qss_path)))
+        return res
 
     def createMenus(self):
         '''init menus: common menus + dock widget view menu'''
@@ -78,11 +96,10 @@ class MainMenu(object):
 
         # add widget converted menu
         self.dockAction = self.mainWindow.propertyView().toggleViewAction()
-        self.dockAction.setIcon(QIcon(self.img_path+'item_comments.png'))
+        self.dockAction.setIcon(QIcon('{0}/images/item_comments.png'.format(self._rootPath)))
         self.dockAction.setToolTip('Edit reference item')
         self.dockAction.setStatusTip('Edit reference item')
         self.mapActions['view'].addAction(self.dockAction)
-
 
     def createMenusFromConfig(self, parent=None, config=None):
         '''init menu
@@ -173,7 +190,7 @@ class MainMenu(object):
         action = QAction(text, self.mainWindow)
 
         if icon:            
-            action.setIcon(QIcon(self.img_path+icon))
+            action.setIcon(QIcon('{0}/images/{1}'.format(self._rootPath, icon)))
 
         if shortcut:
             action.setShortcut(shortcut)
@@ -247,6 +264,29 @@ class MainMenu(object):
                 return False
 
         return True
+
+    def setStyleSheet(self, styleSheet):
+        if not styleSheet:
+            styleSheet = '{0}/qss/{1}'.format(self._rootPath, 'default.qss')
+        if os.path.isfile(styleSheet):
+            self._styleSheet = styleSheet
+            # apply style sheet
+            with open(styleSheet, 'r') as f:
+                qss = f.read()
+            QApplication.instance().setStyleSheet(qss)
+            # set menu status
+            style_name = os.path.basename(styleSheet)[0:-len('.qss')]
+            for action in self.mapActions['style'].actions():
+                action.setEnabled(True)
+            self.mapActions[style_name].setEnabled(False)
+
+    def getCurrentSheetStyle(self):
+        '''get current style sheet path'''
+        return self._styleSheet
+
+    def about(self):
+        QMessageBox.about(self.mainWindow, "About Tagit",
+                "Manage your documents with <b>Groups</b> and <b>Tags</b>.")
 
 
     # ---------------------------------------------------

@@ -54,7 +54,7 @@ class ItemTableView(QTableView):
 
     def initTableStyle(self):
         # table style
-        self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
+        # self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(ItemModel.DATE, QHeaderView.ResizeToContents)        
         self.verticalHeader().hide()
