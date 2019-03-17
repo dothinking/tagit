@@ -33,6 +33,7 @@ class TagTableView(QTableView):
 
     def initTableStyle(self):
         # table style
+        self.setShowGrid(False)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(TagModel.COLOR, QHeaderView.ResizeToContents)
         self.horizontalHeader().hide()

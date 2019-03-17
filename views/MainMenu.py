@@ -271,7 +271,7 @@ class MainMenu(object):
         if os.path.isfile(styleSheet):
             self._styleSheet = styleSheet
             # apply style sheet
-            with open(styleSheet, 'r') as f:
+            with open(styleSheet, 'r', encoding='utf8') as f:
                 qss = f.read()
             QApplication.instance().setStyleSheet(qss)
             # set menu status

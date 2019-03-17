@@ -6,7 +6,7 @@ import os
 
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtWidgets import (QWidget, QFileDialog, QMessageBox,
-    QLabel, QGridLayout, QLineEdit, QTextEdit,
+    QLabel, QGridLayout, QLineEdit, QTextEdit, QHeaderView,
     QFileSystemModel, QTreeView, QToolButton, QMenu, QTabWidget)
 from PyQt5.QtGui import QDesktopServices
 
@@ -46,7 +46,8 @@ class PropertyWidget(QWidget):
         self.tree.setSortingEnabled(True)
 
         model = QFileSystemModel()
-        self.tree.setModel(model)        
+        self.tree.setModel(model)
+        self.tree.header().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         # tree and comments tabs
         self.tabWidget = QTabWidget()

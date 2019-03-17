@@ -1,1 +1,7 @@
-/* empty stylesheet */
+QHeaderView::section{
+    background-color: white;
+    border: none;
+    border-bottom: 1px solid #cdcdcd;
+    padding: 3px;
+    font-weight: bold;
+}

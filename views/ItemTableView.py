@@ -20,6 +20,8 @@ class ItemTableView(QTableView):
     def __init__(self, header, groupView, tagView, parent=None):
         super(ItemTableView, self).__init__(parent)
 
+        self.setObjectName("itemTable") # for qss
+
         self.groupView = groupView
         self.tagView = tagView        
 
@@ -54,7 +56,7 @@ class ItemTableView(QTableView):
 
     def initTableStyle(self):
         # table style
-        # self.horizontalHeader().setStyleSheet("QHeaderView::section{background:#eee;}")
+        self.setShowGrid(False)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(ItemModel.DATE, QHeaderView.ResizeToContents)        
         self.verticalHeader().hide()
@@ -114,7 +116,7 @@ class ItemTableView(QTableView):
                 continue
 
             # set icon with bg-color same as tag
-            pixmap = QPixmap(16, 16)
+            pixmap = QPixmap(12, 12)
             pixmap.fill(QColor(tag[2]))
 
             # tags not attached yet -> to be attached

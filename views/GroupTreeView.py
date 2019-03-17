@@ -30,7 +30,6 @@ class GroupTreeView(QTreeView):
     def initTableStyle(self):
         # tree style
         self.resizeColumnToContents(0)
-        self.setAlternatingRowColors(True)
         self.header().hide()
         self.expandAll()
 
