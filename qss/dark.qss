@@ -130,6 +130,17 @@ QToolBar {
     spacing: 3px; /* spacing between items in the tool bar */
 }
 
+QToolBar:handle {
+    width: 2px;
+    background-color: #151515;
+    margin-right: 4px;
+}
+
+QToolBar::separator {
+    width: 1px;
+    background-color: #151515;
+}
+
 /* QToolButton ------------------------------------------------------------ */
 
 QToolButton {
@@ -149,6 +160,15 @@ QToolButton:checked:hover{
     background-color: #202020;
     border-radius: 6px;
 }
+
+QToolBar QLineEdit {
+    min-width: 100px;
+    max-width: 250px;
+    padding: 2px;
+    margin-right: 10px;
+    border-radius: 4px;
+}
+
 
 /* QToolTip --------------------------------------------------------------- */
 

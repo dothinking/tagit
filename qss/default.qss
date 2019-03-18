@@ -5,3 +5,11 @@ QHeaderView::section{
     padding: 3px;
     font-weight: bold;
 }
+
+QToolBar QLineEdit {
+    min-width: 100px;
+    max-width: 250px;
+    margin: 0;
+    margin-right: 10px;
+    border-radius: 4px;
+}

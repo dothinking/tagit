@@ -3,8 +3,9 @@
 import os
 from functools import partial
 
+from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import (QIcon, QKeySequence)
-from PyQt5.QtWidgets import (QApplication, QFileDialog, QMessageBox, QAction, QDockWidget)
+from PyQt5.QtWidgets import (QApplication, QWidget, QSizePolicy, QFileDialog, QMessageBox, QAction, QLineEdit)
 
 
 class MainMenu(object):
@@ -30,7 +31,6 @@ class MainMenu(object):
             ('&Edit',[
                 ('New Item', self.mainWindow.itemsView().slot_appendRow,'Ctrl+I', 'item.png', 'Create item'),
                 ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
-                (),
                 ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_attachment.png', 'Open attached reference'),
                 (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
@@ -61,6 +61,11 @@ class MainMenu(object):
         self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_selected_item_changed)
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.groupsView().slot_updateCounter)
         self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.tagsView().slot_updateCounter)
+
+        # search items
+        self.searchEdit = QLineEdit()
+        self.searchEdit.setPlaceholderText('Searching')
+        self.searchEdit.textChanged.connect(self.slot_search)
 
         # other signals
         QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
@@ -169,21 +174,31 @@ class MainMenu(object):
         self.fileToolBar.addAction(self.mapActions['open'])
         self.fileToolBar.addAction(self.mapActions['save'])
 
+        # edit
         self.editToolBar = self.mainWindow.addToolBar('Edit')
         self.editToolBar.addAction(self.mapActions['new item'])
         self.editToolBar.addAction(self.mapActions['remove item'])
-        self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['open reference'])
+
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new group'])
         self.editToolBar.addAction(self.mapActions['new sub-group'])
         self.editToolBar.addAction(self.mapActions['remove group'])
+        
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new tag'])
         self.editToolBar.addAction(self.mapActions['remove tag'])
 
+        # view
         self.viewToolBar = self.mainWindow.addToolBar('View')
         self.viewToolBar.addAction(self.dockAction)
+
+        # search
+        self.searchToolBar = self.mainWindow.addToolBar('Search')
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.searchToolBar.addWidget(spacer)
+        self.searchToolBar.addWidget(self.searchEdit)
 
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False):
         # create action from text or convert from dock view        
@@ -355,3 +370,7 @@ class MainMenu(object):
             name = ''
             note = ''
         self.mainWindow.propertyView().widget().setup(index, (name, path, note))
+
+    def slot_search(self):
+        regExp = QRegExp(self.searchEdit.text(), Qt.CaseInsensitive, QRegExp.Wildcard)
+        self.mainWindow.itemsView().model().setFilterRegExp(regExp)

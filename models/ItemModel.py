@@ -41,28 +41,35 @@ class SortFilterProxyModel(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, sourceRow, sourceParent):
         '''filter with group and tag'''
+
+        # always filtered by searching text
+        name = self.sourceModel().index(sourceRow, ItemModel.NAME, sourceParent).data()
+        path = self.sourceModel().index(sourceRow, ItemModel.PATH, sourceParent).data()
+        text_filter = self.filterRegExp().indexIn(name)>=0 and self.filterRegExp().indexIn(path)>=0
+
+        # filtered by group
         if self.filterKeyColumn() == ItemModel.GROUP:
             group = self.sourceModel().index(sourceRow, ItemModel.GROUP, sourceParent).data()
             # Unreferenced: path is invalid
             if not self.groupList:
                 return False
             elif self.groupList[0]==GroupModel.UNREFERENCED:
-                path = self.sourceModel().index(sourceRow, ItemModel.PATH, sourceParent).data()                
-                return not path or not os.path.exists(path)
+                return text_filter and not (path and os.path.exists(path))
             # ALL
             elif self.groupList[0]==GroupModel.ALLGROUPS:
-                return True
+                return text_filter
             else:
-                return group in self.groupList
+                return text_filter and group in self.groupList
 
+        # filtered by tag
         elif self.filterKeyColumn() == ItemModel.TAGS:
             tags = self.sourceModel().index(sourceRow, ItemModel.TAGS, sourceParent).data()
             if tags==None or self.tagId==None:
                 return False
             elif self.tagId==TagModel.NOTAG: # Untagged
-                return tags==[]
+                return text_filter and tags==[]
             else:
-                return self.tagId in tags
+                return text_filter and self.tagId in tags
 
         # Not our business.
         return super(SortFilterProxyModel, self).filterAcceptsRow(sourceRow, sourceParent)
