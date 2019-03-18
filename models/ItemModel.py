@@ -45,7 +45,7 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         # always filtered by searching text
         name = self.sourceModel().index(sourceRow, ItemModel.NAME, sourceParent).data()
         path = self.sourceModel().index(sourceRow, ItemModel.PATH, sourceParent).data()
-        text_filter = self.filterRegExp().indexIn(name)>=0 and self.filterRegExp().indexIn(path)>=0
+        text_filter = self.filterRegExp().indexIn(name)>=0 or self.filterRegExp().indexIn(path)>=0
 
         # filtered by group
         if self.filterKeyColumn() == ItemModel.GROUP:

@@ -1,6 +1,7 @@
 # editable table view for tags:
 # insert, remove, edit color
 # 
+import random
 
 from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
@@ -73,6 +74,12 @@ class TagTableView(QTableView):
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
+    @staticmethod
+    def randomColor():
+        chars = ['1','2','3','4','5','6','7','8','9','A','B','C','D','E','F']
+        colors =  [chars[random.randint(0,14)] for i in range(6)]
+        return "#" + ''.join(colors)
+
     def slot_finishedEditing(self, index):
         self.closePersistentEditor(index)
 
@@ -92,7 +99,7 @@ class TagTableView(QTableView):
             # set default data
             self.sourceModel.setData(child_key, self.sourceModel.nextKey())
             self.sourceModel.setData(child_name, 'New Tag')
-            self.sourceModel.setData(child_color, '#000000')
+            self.sourceModel.setData(child_color, self.randomColor())
             self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
 
             # enter editing status and quit when finished
