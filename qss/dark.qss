@@ -26,6 +26,41 @@ QWidget:item:hover {
     background-color: #148CD2;
 }
 
+/* QScrollBar ------------------------------------------------------ */
+
+QScrollBar:horizontal
+{
+    height: 10px;
+    background: #282828;
+}
+
+QScrollBar:vertical
+{
+    width: 10px;
+    background: #282828;
+}
+
+QScrollBar::handle:horizontal,
+QScrollBar::handle:vertical
+{
+    background-color: #151515;
+    border-radius: 4px;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal,
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none; /*remove this background, then the scrollbar background is shown*/
+}
+
+QScrollBar::sub-line:horizontal, QScrollBar::add-line:horizontal,
+QScrollBar::up-arrow:horizontal, QScrollBar::down-arrow:horizontal,
+QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical,
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical
+{
+    background: none;
+}
+
+
 /* QAbstractItemView ------------------------------------------------------ */
 
 QAbstractItemView {
