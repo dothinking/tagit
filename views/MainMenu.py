@@ -7,6 +7,8 @@ from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import (QIcon, QKeySequence)
 from PyQt5.QtWidgets import (QApplication, QWidget, QSizePolicy, QFileDialog, QMessageBox, QAction, QLineEdit)
 
+import views.resources
+
 
 class MainMenu(object):
     """main menu and toolbox for main window"""
@@ -31,7 +33,7 @@ class MainMenu(object):
             ('&Edit',[
                 ('New Item', self.mainWindow.itemsView().slot_appendRow,'Ctrl+I', 'item.png', 'Create item'),
                 ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
-                ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_attachment.png', 'Open attached reference'),
+                ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_source.png', 'Open attached reference'),
                 (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
@@ -101,7 +103,7 @@ class MainMenu(object):
 
         # add widget converted menu
         self.dockAction = self.mainWindow.propertyView().toggleViewAction()
-        self.dockAction.setIcon(QIcon('{0}/images/item_comments.png'.format(self._rootPath)))
+        self.dockAction.setIcon(QIcon(':icon/images/edit_item.png'))
         self.dockAction.setToolTip('Edit reference item')
         self.dockAction.setStatusTip('Edit reference item')
         self.mapActions['view'].addAction(self.dockAction)
@@ -205,7 +207,7 @@ class MainMenu(object):
         action = QAction(text, self.mainWindow)
 
         if icon:            
-            action.setIcon(QIcon('{0}/images/{1}'.format(self._rootPath, icon)))
+            action.setIcon(QIcon(':icon/images/{0}'.format(icon)))
 
         if shortcut:
             action.setShortcut(shortcut)

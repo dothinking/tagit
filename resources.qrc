@@ -1,0 +1,16 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>images/new.png</file>
+    <file>images/open.png</file>
+    <file>images/save.png</file>
+    <file>images/group.png</file>
+    <file>images/sub_group.png</file>
+    <file>images/del_group.png</file>
+    <file>images/item.png</file>
+    <file>images/edit_item.png</file>    
+    <file>images/del_item.png</file>
+    <file>images/item_source.png</file>
+    <file>images/tag.png</file>
+    <file>images/del_tag.png</file>
+  </qresource>
+</RCC>

@@ -47,6 +47,16 @@ QScrollBar::handle:vertical
     border-radius: 4px;
 }
 
+QScrollBar::handle:horizontal
+{
+    min-width: 20px;
+}
+
+QScrollBar::handle:vertical
+{
+    min-height: 20px;
+}
+
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal,
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: none; /*remove this background, then the scrollbar background is shown*/
@@ -189,6 +199,10 @@ QToolButton:checked {
     border-radius: 6px;
 }
 
+QToolButton:disabled {
+    background-color: #303030;
+}
+
 QToolButton:hover,
 QToolButton:checked:hover{
     border: 1px solid #148CD2;
@@ -202,6 +216,7 @@ QToolBar QLineEdit {
     padding: 2px;
     margin-right: 10px;
     border-radius: 4px;
+    min-height: 20px;
 }
 
 
@@ -264,6 +279,7 @@ QPlainTextEdit:selected {
 /* QPushButton ------------------------------------------------------------ */
 
 QPushButton {
+    min-width: 50px;
     background-color: #232629 ;
     color: #F0F0F0;
     border-radius: 4px;
