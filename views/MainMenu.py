@@ -51,28 +51,20 @@ class MainMenu(object):
         ]
         self.mapActions = {} # name -> action/menu
 
-        # group view signals
-        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.slot_selected_group_changed)
-        self.mainWindow.groupsView().groupRemoved.connect(self.mainWindow.itemsView().slot_ungroupItems)
-
-        # tag view signals
-        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.slot_selected_tag_changed)
-        self.mainWindow.tagsView().tagRemoved.connect(self.mainWindow.itemsView().slot_untagItems)
+        # menu enabled status
+        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
+        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.refreshMenus)
+        self.mainWindow.groupsView().parent().currentChanged.connect(self.refreshItems) # tabwidget
+        QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
 
         # preference item signals
         self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_selected_item_changed)
-        self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.groupsView().slot_updateCounter)
-        self.mainWindow.itemsView().itemsChanged.connect(self.mainWindow.tagsView().slot_updateCounter)
 
         # search items
         self.searchEdit = QLineEdit()
         self.searchEdit.setPlaceholderText('Searching')
-        self.searchEdit.textChanged.connect(self.slot_search)
-
-        # other signals
-        QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
-        self.mainWindow.groupsView().parent().currentChanged.connect(self.refreshItems) # tabwidget
-
+        self.searchEdit.textChanged.connect(self.slot_search)       
+        
 
     # ---------------------------------------------------
     # menus and actions
@@ -310,46 +302,13 @@ class MainMenu(object):
     # slots for main widgets
     # ---------------------------------------------------
 
-    def slot_selected_group_changed(self, current, previous):
-        '''
-        :param current: current selections, list of QModelIndex
-        :param previous: previous selections
-        '''
-        # refresh menu status
-        self.refreshMenus()
+    def slot_selected_item_changed(self):
 
-        # filter reference items by gruop
-        for index in current.indexes():
-            break
-        else:
-            return
-        self.mainWindow.itemsView().slot_filterByGroup(index)
-
-    def slot_selected_tag_changed(self, current, previous):
-        '''
-        :param current: current selections, list of QModelIndex
-        :param previous: previous selections
-        '''
-        # refresh menu status
-        self.refreshMenus()
-
-        # filter reference items by tag
-        for index in current.indexes():
-            break
-        else:
-            return
-        self.mainWindow.itemsView().slot_filterByTag(index)
-
-    def slot_selected_item_changed(self, current, previous):
-        '''
-        :param current: current selections, list of QModelIndex
-        :param previous: previous selections
-        '''
         # refresh menu status
         self.refreshMenus()
 
         # current index
-        for index in current.indexes():
+        for index in self.mainWindow.itemsView().selectedIndexes():
             break
         else:
             index = None
