@@ -3,7 +3,7 @@
 
 import os
 
-from PyQt5.QtCore import QSortFilterProxyModel, QModelIndex, Qt, QRect, QEvent, QPointF
+from PyQt5.QtCore import (QSortFilterProxyModel, QModelIndex, Qt, QRect, QEvent, QPointF, QMimeData)
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QStyledItemDelegate, QStyle
 
@@ -24,7 +24,18 @@ class ItemModel(TableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+
+    def mimeTypes(self):
+        return ['tagit-item']
+
+    def mimeData(self, indexes):
+        '''store current group'''
+        group = indexes[0].siblingAtColumn(ItemModel.GROUP).data()
+        mimedata = QMimeData()        
+        mimedata.setData('tagit-item', str(group).encode())
+        return mimedata
+
  
 class SortFilterProxyModel(QSortFilterProxyModel):
 

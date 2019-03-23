@@ -3,9 +3,9 @@
 # 
 import random
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
+from PyQt5.QtCore import QItemSelectionModel, Qt, QRect, pyqtSignal
 from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPainter, QPalette
 
 from models.TagModel import TagModel, TagDelegate
 
@@ -13,6 +13,7 @@ from models.TagModel import TagModel, TagDelegate
 class TagTableView(QTableView):
 
     tagRemoved = pyqtSignal(int)
+    itemsDropped = pyqtSignal(int) # drag items to tag and drop
 
     def __init__(self, header, parent=None):
         super(TagTableView, self).__init__(parent)
@@ -39,6 +40,10 @@ class TagTableView(QTableView):
         self.horizontalHeader().setSectionResizeMode(TagModel.COLOR, QHeaderView.ResizeToContents)
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
+
+        # drop
+        self.setAcceptDrops(True)
+        self.highlightRect = QRect() # show drop indicator
 
         self.setSelectionMode(QTableView.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectRows)
@@ -74,6 +79,67 @@ class TagTableView(QTableView):
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
+    # ---------------------------------------------------
+    # drag events
+    # ---------------------------------------------------
+    def paintEvent(self, e):
+        # default paint event
+        super(TagTableView, self).paintEvent(e)
+
+        # draw droping indicator
+        if self.highlightRect.isValid():
+            painter = QPainter(self.viewport()) # painter applying on viewpoint
+            color = self.viewport().palette().color(QPalette.Highlight) # highlight
+            painter.setPen(color)
+            painter.drawRect(self.highlightRect)
+
+    def dragEnterEvent(self, e):
+        '''accept drag event when the mimedata is specified by user -> tagit-item'''
+        # concern itemtable view only
+        if not e.mimeData().hasFormat('tagit-item'):
+            e.ignore()
+            return
+
+        # tree view item right in current cursor
+        index = self.indexAt(e.pos())
+        if not index.isValid():
+            e.ignore()
+            return
+
+        # calculate row region
+        index_name = index.siblingAtColumn(self.sourceModel.NAME)
+        index_color = index.siblingAtColumn(self.sourceModel.COLOR)
+        rect_name = self.visualRect(index_name)
+        rect_color = self.visualRect(index_color)
+
+        self.highlightRect = rect_name.united(rect_color) # current tag region
+        self.viewport().update() # trigger paint event to update view
+        e.accept()
+
+    def dragMoveEvent(self, e):
+        self.dragEnterEvent(e)
+
+    def dropEvent(self, e):
+        '''accept drag event only if the mimedata is specified type defined by user'''        
+        if not e.mimeData().hasFormat('tagit-item'):
+            e.ignore()
+            return
+
+        # target tag
+        index = self.indexAt(e.pos())
+        key = index.siblingAtColumn(self.sourceModel.KEY).data()
+        self.itemsDropped.emit(key)
+
+        # clear droping indicator
+        self.highlightRect = QRect()
+        self.viewport().update()
+
+        e.accept()  
+
+    # ---------------------------------------------------
+    # slots
+    # ---------------------------------------------------
+
     @staticmethod
     def randomColor():
         chars = ['1','2','3','4','5','6','7','8','9','A','B','C','D','E','F']
@@ -108,7 +174,6 @@ class TagTableView(QTableView):
             if editWidget:
                 editWidget.setFocus()
                 editWidget.editingFinished.connect(lambda:self.slot_finishedEditing(child_name))
-
 
     def slot_removeRow(self):
         '''delete selected item'''

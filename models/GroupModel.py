@@ -299,7 +299,6 @@ class GroupModel(TreeModel):
         return result
 
 
-
 if __name__ == '__main__':
 
     import sys

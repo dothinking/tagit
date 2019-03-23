@@ -66,6 +66,10 @@ class ItemTableView(QTableView):
         self.groupView.selectionModel().selectionChanged.connect(self.slot_filterByGroup)
         self.tagView.selectionModel().selectionChanged.connect(self.slot_filterByTag)
 
+        # drag items to add group/tag
+        self.groupView.itemsDropped.connect(self.slot_moveGroup)
+        self.tagView.itemsDropped.connect(self.slot_attachTag)
+
         # doule click to open source path
         self.doubleClicked.connect(self.slot_navigateTo)
 
@@ -104,6 +108,9 @@ class ItemTableView(QTableView):
         '''get all groups in hierachical structure as defined in group class'''
         return self.groupView.model().serialize(save=False)
 
+    # ---------------------------------------------------
+    # context menus
+    # ---------------------------------------------------
     def setupCascadeGroupMenu(self, menu, config, keys=[]):
         '''create cascade menu according to specified groups
            :param menu: parent menu
@@ -189,6 +196,11 @@ class ItemTableView(QTableView):
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
+    
+    # ---------------------------------------------------
+    # slots
+    # ---------------------------------------------------
+
     def slot_appendRow(self):
         '''inset items'''
         # current gruop
@@ -213,7 +225,6 @@ class ItemTableView(QTableView):
                 for i, data in enumerate(row_data):
                     index = self.sourceModel.index(num_row, i)
                     self.sourceModel.setData(index, data)
-
 
     def slot_navigateTo(self):
         '''open current item'''
@@ -258,11 +269,18 @@ class ItemTableView(QTableView):
     def slot_attachTag(self, key):
         '''add tag to current item'''
         indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
-        for index in indexes[::-1]: # ATTENTION
-            keys = index.data()
-            if key not in keys:
-                keys.append(key)
-                self.proxyModel.setData(index, keys)
+
+        # if key=UNTAGGED, remove all tags
+        if key == self.tagView.model().NOTAG:
+            for index in indexes[::-1]:
+                self.proxyModel.setData(index, [])
+        else:
+            for index in indexes[::-1]: # ATTENTION
+                keys = index.data()
+                if key not in keys:
+                    keys.append(key)
+                    self.proxyModel.setData(index, keys)
+            self.proxyModel.layoutChanged.emit()
 
     def slot_removeTag(self, key):
         '''delete tag from current item'''
