@@ -12,7 +12,7 @@ from PyQt5.QtGui import QPixmap, QIcon, QColor, QDesktopServices
 
 from models.ItemModel import ItemModel, ItemDelegate, SortFilterProxyModel
 
-from views.CreateItemDialog import CreateItemDialog
+from views.CreateItemDialog import SingleItemDialog, MultiItemsDialog
 
 class ItemTableView(QTableView):
 
@@ -158,41 +158,45 @@ class ItemTableView(QTableView):
 
     def customContextMenu(self, position):
         '''show context menu'''
-        indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
-        if not indexes:
-            return
-
-        # group of current item
-        gid = indexes[0].data()
-
-        # tags of current item
-        tids = self.selectionModel().selectedRows(ItemModel.TAGS)[0].data()
 
         # menus on items
         menu = QMenu()
 
-        # edit item
-        menu.addAction(self.tr("New Item"), self.slot_appendRow)
-        menu.addAction(self.tr("Remove Item"), self.slot_removeRows)
+        indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
+        if indexes:
+            # group of current item
+            gid = indexes[0].data()
 
-        menu.addSeparator()
-        menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
+            # tags of current item
+            tids = self.selectionModel().selectedRows(ItemModel.TAGS)[0].data()        
 
-        # menus on groups
-        menu.addSeparator()
-        move = QMenu(self.tr('Move to Group'))
-        groups = self.rootGroup()[self.groupView.model().CHILDREN]
-        
-        self.setupCascadeGroupMenu(move, groups, [gid, 
-                self.groupView.model().UNREFERENCED,
-                self.groupView.model().ALLGROUPS]) # 2->UNREFERENCED, 3->ALL GROUP
-        menu.addMenu(move)
+            # open source path
+            menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
 
-        # menus on tags
-        menu.addSeparator()
-        addTag = QMenu(self.tr("Attach Tags"))
-        delTag = QMenu(self.tr("Remove Tags"))
-        self.setupTagsMenu(menu, addTag, delTag, tids)
+            # menus on groups
+            menu.addSeparator()
+            move = QMenu(self.tr('Move to Group'))
+            groups = self.rootGroup()[self.groupView.model().CHILDREN]
+            
+            self.setupCascadeGroupMenu(move, groups, [gid, 
+                    self.groupView.model().UNREFERENCED,
+                    self.groupView.model().ALLGROUPS]) # 2->UNREFERENCED, 3->ALL GROUP
+            menu.addMenu(move)
+
+            # menus on tags
+            menu.addSeparator()
+            addTag = QMenu(self.tr("Attach Tags"))
+            delTag = QMenu(self.tr("Remove Tags"))
+            self.setupTagsMenu(menu, addTag, delTag, tids)
+
+            # remove items
+            menu.addSeparator()
+            menu.addAction(self.tr("Remove Item"), self.slot_removeRows)
+            
+        else:
+            # create item
+            menu.addAction(self.tr("New Item"), partial(self.slot_appendRows, True))
+            menu.addAction(self.tr("Import Items"), partial(self.slot_appendRows, False))
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
@@ -200,31 +204,37 @@ class ItemTableView(QTableView):
     # ---------------------------------------------------
     # slots
     # ---------------------------------------------------
-
-    def slot_appendRow(self):
-        '''inset items'''
+    def slot_appendRows(self, single=True):
+        '''inset single item if single=True, otherwise insert items by MultiTiemsDialog'''
         # current gruop
         indexes = self.groupView.selectionModel().selectedRows(self.groupView.model().KEY)
         group = self.groupView.model().UNGROUPED # UNGROUP
         if indexes and indexes[0].isValid():
             group = indexes[0].data()
+
         # set default group as UNGROUP, though current group is UNREFERENCED(2) or ALL GROUPS(3)
         if group in [self.groupView.model().UNREFERENCED,self.groupView.model().ALLGROUPS]:
             group = self.groupView.model().UNGROUPED
 
-        # add item
-        dlg = CreateItemDialog()
+        # add items        
+        dlg = SingleItemDialog() if single else MultiItemsDialog()
         if dlg.exec_():
-            # insert row at the end of table
-            num_row = self.sourceModel.rowCount()
-            if self.sourceModel.insertRow(num_row):
+            # collect items data
+            c_time = time.strftime('%Y-%m-%d',time.localtime(time.time()))
+            if single:
                 path, name = dlg.values()
-                c_time = time.strftime('%Y-%m-%d',time.localtime(time.time()))
-                # set row values
-                row_data = [name, group, [], path, c_time, '']
-                for i, data in enumerate(row_data):
-                    index = self.sourceModel.index(num_row, i)
-                    self.sourceModel.setData(index, data)
+                rows = [(name, group, [], path, c_time, '')]
+            else:
+                rows = [(os.path.basename(path), group, [], path, c_time, '') for path in dlg.values()]
+
+            # append to item table
+            num_row = self.sourceModel.rowCount()
+            if self.sourceModel.insertRows(num_row, len(rows)):
+                for i, row in enumerate(rows):
+                    for j, col in enumerate(row):
+                        index = self.sourceModel.index(num_row+i, j)
+                        self.sourceModel.setData(index, col)
+
 
     def slot_navigateTo(self):
         '''open current item'''

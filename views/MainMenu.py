@@ -31,7 +31,8 @@ class MainMenu(object):
                 ('E&xit', self.mainWindow.close, 'Ctrl+Q'),
             ]),
             ('&Edit',[
-                ('New Item', self.mainWindow.itemsView().slot_appendRow,'Ctrl+I', 'item.png', 'Create item'),
+                ('New Item', partial(self.mainWindow.itemsView().slot_appendRows, True), 'Ctrl+I', 'item.png', 'Create item'),
+                ('Import Items', partial(self.mainWindow.itemsView().slot_appendRows, False), None, 'item.png', 'Import items from selected path'),
                 ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
                 ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_source.png', 'Open attached reference'),
                 (),
@@ -171,6 +172,7 @@ class MainMenu(object):
         # edit
         self.editToolBar = self.mainWindow.addToolBar('Edit')
         self.editToolBar.addAction(self.mapActions['new item'])
+        self.editToolBar.addAction(self.mapActions['import items'])
         self.editToolBar.addAction(self.mapActions['remove item'])
         self.editToolBar.addAction(self.mapActions['open reference'])
 
