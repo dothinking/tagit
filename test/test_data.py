@@ -22,7 +22,7 @@ def fun_groups(res, level=4):
 		fun_groups(x[2], level-1)
 
 def fun_tags(num):
-	return [[i, "Tag_{0}".format(i+1), randomColor()] for i in range(num)]
+	return [[i+1, "Tag_{0}".format(i+1), randomColor()] for i in range(num)]
 
 
 def fun_items(max_item, max_group, max_tag):
