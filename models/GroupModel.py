@@ -1,7 +1,6 @@
 # model for group tree view
 # an editable tree based on simple TreeModel
 
-import os
 from PyQt5.QtCore import QModelIndex, Qt
 from .TreeModel import TreeItem, TreeModel
 
@@ -256,16 +255,8 @@ class GroupModel(TreeModel):
                 keys, name = group.keys(), group.data(col)
                 count = 0 # count
 
-                # unreferenced items
-                if keys==[GroupModel.UNREFERENCED]:
-                    for item in self.referenceList:
-                        path = item[3]
-                        if not path or not os.path.exists(path):
-                            count += 1
-                # all items
-                elif keys==[GroupModel.ALLGROUPS]:
+                if keys==[GroupModel.ALLGROUPS]:
                     count = len(self.referenceList)
-                # common items
                 else:                
                     for item in self.referenceList:
                         if item[1] in keys:
