@@ -11,6 +11,7 @@ from models.GroupModel import GroupModel
 class GroupTreeView(QTreeView):
 
     groupRemoved = pyqtSignal(list)
+    emptyTrash = pyqtSignal(int)
     itemsDropped = pyqtSignal(int) # drag items to group and drop
 
     def __init__(self, header, parent=None):
@@ -88,7 +89,7 @@ class GroupTreeView(QTreeView):
             if key==GroupModel.ALLGROUPS:
                 menu.addAction(self.tr("Create Group"), self.slot_insertRow)
             if key==GroupModel.TRASH:
-                menu.addAction(self.tr("Empty Trash"))
+                menu.addAction(self.tr("Empty Trash"), lambda: self.emptyTrash.emit(key))
 
         if menu.actions():
             menu.exec_(self.viewport().mapToGlobal(position))
@@ -128,7 +129,7 @@ class GroupTreeView(QTreeView):
         itemData = e.mimeData().data('tagit-item')
         current_group = int(str(itemData, encoding='utf-8'))
         key = index.siblingAtColumn(self.sourceModel.KEY).data()
-        if key not in (current_group, self.sourceModel.ALLGROUPS, self.sourceModel.UNREFERENCED):
+        if key not in (current_group, self.sourceModel.ALLGROUPS, self.sourceModel.UNREFERENCED, self.sourceModel.DUPLICATED):
             self.highlightRect = self.visualRect(index) # QRect of current tree item
             self.viewport().update() # trigger paint event to update view
             e.accept()

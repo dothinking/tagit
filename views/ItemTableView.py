@@ -52,7 +52,10 @@ class ItemTableView(QTableView):
     def setupSignalsAndSlots(self):
         # reset items when remove group/tag
         self.groupView.groupRemoved.connect(self.slot_ungroupItems)
-        self.tagView.tagRemoved.connect(self.slot_untagItems)       
+        self.tagView.tagRemoved.connect(self.slot_untagItems)
+
+        # delete items in trash
+        self.groupView.emptyTrash.connect(self.slot_deleteItemsByGroup) 
 
         # update group/tag counter when items are changed
         # emit signal to request updating group counter
@@ -114,11 +117,11 @@ class ItemTableView(QTableView):
     # ---------------------------------------------------
     # context menus
     # ---------------------------------------------------
-    def setupCascadeGroupMenu(self, menu, config, keys=[]):
+    def setupCascadeGroupMenu(self, menu, config, currentGroup):
         '''create cascade menu according to specified groups
            :param menu: parent menu
            :param config: groups data for menu items
-           :param key: groups id exclued from creating menu item, e.g. current group, ALL GROUP
+           :param currentGroup: group id exclued from creating menu item, e.g. current group
         '''
         for item in config:
             # group information
@@ -127,13 +130,13 @@ class ItemTableView(QTableView):
             # create menu action, but skip specified groups
             action = menu.addAction(name, partial(self.slot_moveGroup, key))
 
-            if key in keys:
+            if key==currentGroup:
                 action.setEnabled(False)
 
             # create menu if children items exist
             if children:
                 sub_menu = menu.addMenu('{0}...'.format(name))
-                self.setupCascadeGroupMenu(sub_menu, children, keys)
+                self.setupCascadeGroupMenu(sub_menu, children, currentGroup)
 
     def setupTagsMenu(self, menu, addTagMenu, delTagMenu, currentTags):
         '''attach oe detach tags for current item'''
@@ -183,13 +186,12 @@ class ItemTableView(QTableView):
 
                 # menus on groups            
                 move = QMenu(self.tr('Move to Group'))
-                groups = self.rootGroup()[self.groupView.model().CHILDREN]
-                
-                self.setupCascadeGroupMenu(move, groups, [gid, 
-                        self.groupView.model().UNREFERENCED,
-                        self.groupView.model().ALLGROUPS]) # 2->UNREFERENCED, 3->ALL GROUP
-                menu.addMenu(move)
-                menu.addSeparator()
+                groups = self.rootGroup()[self.groupView.model().CHILDREN]                
+                self.setupCascadeGroupMenu(move, groups, gid)
+
+                if move.actions():
+                    menu.addMenu(move)
+                    menu.addSeparator()
 
             # menus on tags            
             addTag = QMenu(self.tr("Attach Tags"))
@@ -197,8 +199,12 @@ class ItemTableView(QTableView):
             self.setupTagsMenu(menu, addTag, delTag, tids)
             menu.addSeparator()
 
-            # remove items            
-            menu.addAction(self.tr("Remove Item"), self.slot_removeRows)
+            # remove items to trash
+            trash = self.groupView.model().TRASH
+            if gid!=trash:
+                menu.addAction(self.tr("Move to Trash"), partial(self.slot_moveGroup, trash))
+            else:
+                menu.addAction(self.tr("Delete"), self.slot_deleteItems)               
             
         else:
             # create item
@@ -215,13 +221,10 @@ class ItemTableView(QTableView):
         '''inset single item if single=True, otherwise insert items by MultiTiemsDialog'''
         # current gruop
         indexes = self.groupView.selectionModel().selectedRows(self.groupView.model().KEY)
-        group = self.groupView.model().UNGROUPED # UNGROUP
-        if indexes and indexes[0].isValid():
+        if not indexes or not indexes[0].isValid() or self.groupView.model().isDefaultGroup(indexes[0]):
+            group = self.groupView.model().UNGROUPED # UNGROUP
+        else:
             group = indexes[0].data()
-
-        # set default group as UNGROUP, though current group is UNREFERENCED(2) or ALL GROUPS(3)
-        if group in [self.groupView.model().UNREFERENCED,self.groupView.model().ALLGROUPS]:
-            group = self.groupView.model().UNGROUPED
 
         # add items        
         dlg = SingleItemDialog() if single else MultiItemsDialog()
@@ -250,11 +253,11 @@ class ItemTableView(QTableView):
         path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
-    def slot_removeRows(self):
-        '''delete selected item'''
+    def slot_deleteItems(self):
+        '''delete selected item forever'''
         rows = self.selectionModel().selectedRows()
         reply = QMessageBox.question(self, 'Confirm', 
-            "Confirm to remove the selected {0} item(s)?".format(len(rows)),
+            "Confirm to remove the selected {0} item(s)? Items deleted by this operation can not be restored.".format(len(rows)),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply != QMessageBox.Yes:
@@ -325,7 +328,32 @@ class ItemTableView(QTableView):
         for i in range(self.sourceModel.rowCount()):
             index = self.sourceModel.index(i, ItemModel.GROUP)
             if index.data() in keys:
-                self.sourceModel.setData(index, self.groupView.model().UNGROUPED) # Ungrouped        
+                self.sourceModel.setData(index, self.groupView.model().UNGROUPED) # Ungrouped
+
+    def slot_deleteItemsByGroup(self, key):
+        '''delete all items with specified group id'''
+
+        reply = QMessageBox.question(self, 'Confirm', 
+            "Confirm to delete all items in Trash? Items deleted by this operation can not be restored.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply != QMessageBox.Yes:
+            return
+
+        # collect indexes to be removed
+        indexes = []
+        for i in range(self.sourceModel.rowCount()):
+            index = self.sourceModel.index(i, ItemModel.GROUP)
+            if index.data()==key:
+                indexes.append(index)
+
+        # delete
+        for index in indexes[::-1]:
+            self.sourceModel.removeRow(index.row())
+
+        # emit signal to request updating group/tag counter
+        if indexes:
+            self.itemsChanged.emit(self.sourceModel.serialize(save=False))
 
     def slot_untagItems(self, key):
         '''remove specified tag from all items'''
