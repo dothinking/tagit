@@ -22,9 +22,41 @@ class ItemModel(TableModel):
     def flags(self, index):
         '''item status'''
         if not index.isValid():
-            return Qt.ItemIsEnabled
+            return Qt.ItemIsEnabled        
 
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+
+    def setup(self, items=[]):
+        '''setup model data:
+           it is convenient to reset data after the model is created
+        '''
+        self.beginResetModel()
+        self.dataList = items
+        self.endResetModel()
+
+        self.refresh() # correct items with invalid source path
+        
+
+    def refresh(self):
+        '''check invalid source path'''
+        # update source path status:
+        # if path is invalid but group is not UNREFERENCED, move group to UNREFERENCED
+        # if path is valid but group is UNREFERENCED, move group to UNGROUPED
+        self.layoutAboutToBeChanged.emit()
+
+        for i, (_,group,_,path,*_) in enumerate(self.dataList):
+
+            if path and not os.path.exists(path):
+                if self.dataList[i][ItemModel.GROUP] != GroupModel.UNREFERENCED:
+                    self.dataList[i][ItemModel.GROUP] = GroupModel.UNREFERENCED
+                    self._saveRequired = True
+                
+            elif group==GroupModel.UNREFERENCED:                
+                self.dataList[i][ItemModel.GROUP] = GroupModel.UNGROUPED
+                self._saveRequired = True
+
+        self.layoutChanged.emit() # update table view           
+        
 
     def mimeTypes(self):
         return ['tagit-item']
@@ -61,13 +93,10 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         # filtered by group
         if self.filterKeyColumn() == ItemModel.GROUP:
             group = self.sourceModel().index(sourceRow, ItemModel.GROUP, sourceParent).data()
-            # Unreferenced: path is invalid
+            
             if not self.groupList:
-                return False
-            elif self.groupList[0]==GroupModel.UNREFERENCED:
-                return text_filter and not (path and os.path.exists(path))
-            # ALL
-            elif self.groupList[0]==GroupModel.ALLGROUPS:
+                return False            
+            elif self.groupList[0]==GroupModel.ALLGROUPS: # ALL
                 return text_filter
             else:
                 return text_filter and group in self.groupList
