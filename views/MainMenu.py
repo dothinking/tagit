@@ -31,10 +31,14 @@ class MainMenu(object):
                 ('E&xit', self.mainWindow.close, 'Ctrl+Q'),
             ]),
             ('&Edit',[
+                ('Refresh', self.mainWindow.itemsView().sourceModel.refresh, 'F5', 'item.png', 'Refresh items'),
+                (),
                 ('New Item', partial(self.mainWindow.itemsView().slot_appendRows, True), 'Ctrl+I', 'item.png', 'Create item'),
                 ('Import Items', partial(self.mainWindow.itemsView().slot_appendRows, False), None, 'item.png', 'Import items from selected path'),
-                ('Remove Item', self.mainWindow.itemsView().slot_removeRows, None, 'del_item.png', 'Delete item'),
+                ('Move to Trash', partial(self.mainWindow.itemsView().slot_moveToGroup, self.mainWindow.groupsView().model().TRASH), None, 'del_item.png', 'Solt delete: move items to trash'),
+                (),
                 ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_source.png', 'Open attached reference'),
+                ('Find Duplicated', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+D', 'item_source.png', 'Find duplicated items'),
                 (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
@@ -158,7 +162,7 @@ class MainMenu(object):
         # items menu
         item_activated = self.mainWindow.itemsView().hasFocus()
         item_selected = not self.mainWindow.itemsView().selectionModel().selection().isEmpty()
-        self.mapActions['remove item'].setEnabled(item_activated and item_selected)
+        self.mapActions['move to trash'].setEnabled(item_activated and item_selected)
         self.mapActions['open reference'].setEnabled(item_activated and item_selected)
 
     def createToolBars(self):
@@ -171,10 +175,14 @@ class MainMenu(object):
 
         # edit
         self.editToolBar = self.mainWindow.addToolBar('Edit')
+        self.editToolBar.addAction(self.mapActions['refresh'])
+
+        self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new item'])
         self.editToolBar.addAction(self.mapActions['import items'])
-        self.editToolBar.addAction(self.mapActions['remove item'])
+        self.editToolBar.addAction(self.mapActions['move to trash'])
         self.editToolBar.addAction(self.mapActions['open reference'])
+        self.editToolBar.addAction(self.mapActions['find duplicated'])
 
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new group'])

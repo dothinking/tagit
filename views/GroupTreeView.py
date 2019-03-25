@@ -89,7 +89,10 @@ class GroupTreeView(QTreeView):
             if key==GroupModel.ALLGROUPS:
                 menu.addAction(self.tr("Create Group"), self.slot_insertRow)
             if key==GroupModel.TRASH:
-                menu.addAction(self.tr("Empty Trash"), lambda: self.emptyTrash.emit(key))
+                trash = menu.addAction(self.tr("Empty Trash"), lambda: self.emptyTrash.emit(key))
+                # no items in trash
+                if '(' not in index.siblingAtColumn(GroupModel.NAME).data():
+                    trash.setEnabled(False)
 
         if menu.actions():
             menu.exec_(self.viewport().mapToGlobal(position))

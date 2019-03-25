@@ -51,11 +51,11 @@ class ItemTableView(QTableView):
 
     def setupSignalsAndSlots(self):
         # reset items when remove group/tag
-        self.groupView.groupRemoved.connect(self.slot_ungroupItems)
-        self.tagView.tagRemoved.connect(self.slot_untagItems)
+        self.groupView.groupRemoved.connect(partial(self.slot_moveToGroup, self.groupView.model().UNGROUPED))
+        self.tagView.tagRemoved.connect(partial(self.slot_removeTag, fromSelected=False))
 
         # delete items in trash
-        self.groupView.emptyTrash.connect(self.slot_deleteItemsByGroup) 
+        self.groupView.emptyTrash.connect(self.slot_deleteItems) 
 
         # update group/tag counter when items are changed
         # emit signal to request updating group counter
@@ -73,7 +73,7 @@ class ItemTableView(QTableView):
         self.tagView.selectionModel().selectionChanged.connect(self.slot_filterByTag)
 
         # drag items to add group/tag
-        self.groupView.itemsDropped.connect(self.slot_moveGroup)
+        self.groupView.itemsDropped.connect(self.slot_moveToGroup)
         self.tagView.itemsDropped.connect(self.slot_attachTag)
 
         # doule click to open source path
@@ -128,7 +128,7 @@ class ItemTableView(QTableView):
             name, key, children = item
 
             # create menu action, but skip specified groups
-            action = menu.addAction(name, partial(self.slot_moveGroup, key))
+            action = menu.addAction(name, partial(self.slot_moveToGroup, key))
 
             if key==currentGroup:
                 action.setEnabled(False)
@@ -170,7 +170,7 @@ class ItemTableView(QTableView):
         indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
 
         # refresh
-        menu.addAction(self.tr("Refresh"), self.sourceModel.refresh)
+        menu.addAction(self.tr("Refresh"), self.sourceModel.refresh)        
 
         if indexes: # actions on index
             # group of current item
@@ -202,14 +202,17 @@ class ItemTableView(QTableView):
             # remove items to trash
             trash = self.groupView.model().TRASH
             if gid!=trash:
-                menu.addAction(self.tr("Move to Trash"), partial(self.slot_moveGroup, trash))
+                menu.addAction(self.tr("Move to Trash"), partial(self.slot_moveToGroup, trash))
             else:
                 menu.addAction(self.tr("Delete"), self.slot_deleteItems)               
             
         else:
             # create item
+            menu.addSeparator()
             menu.addAction(self.tr("New Item"), partial(self.slot_appendRows, True))
             menu.addAction(self.tr("Import Items"), partial(self.slot_appendRows, False))
+            menu.addSeparator()
+            menu.addAction(self.tr("Find Duplicated"), self.slot_findDuplicatedItems)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
@@ -253,37 +256,55 @@ class ItemTableView(QTableView):
         path = self.proxyModel.index(index.row(), ItemModel.PATH).data()
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
-    def slot_deleteItems(self):
-        '''delete selected item forever'''
-        rows = self.selectionModel().selectedRows()
-        reply = QMessageBox.question(self, 'Confirm', 
-            "Confirm to remove the selected {0} item(s)? Items deleted by this operation can not be restored.".format(len(rows)),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+    def slot_deleteItems(self, group=None):
+        '''delete items by group if group is not empty, otherwise delete selected items'''
 
+        # collect indexes to be removed
+        indexes = []
+        if group:            
+            for i in range(self.sourceModel.rowCount()):
+                index = self.sourceModel.index(i, ItemModel.GROUP)
+                if index.data()==group:
+                    indexes.append(index)
+        else:
+            for proxy_index in self.selectionModel().selectedRows(): # proxy index
+                source_index = self.proxyModel.mapToSource(proxy_index)
+                index = QPersistentModelIndex(source_index)
+                indexes.append(index)
+
+        # request confirm
+        reply = QMessageBox.question(self, 'Confirm', 
+            "Confirm to remove the selected {0} item(s)? Items deleted by this operation can not be restored.".format(len(indexes)),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
 
-        index_list = []
-        for proxy_index in rows: # proxy index
-            source_index = self.proxyModel.mapToSource(proxy_index)
-            index = QPersistentModelIndex(source_index)
-            index_list.append(index)
-
-        for index in index_list:
+        # delete
+        for index in indexes[::-1]:
             self.sourceModel.removeRow(index.row())
 
         # emit signal to request updating group/tag counter
-        if index_list:
+        if indexes:
             self.itemsChanged.emit(self.sourceModel.serialize(save=False))
 
-    def slot_moveGroup(self, key):
-        '''move selected items to specified group'''
-        indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
-        # ATTENTION: performing the moving action in descent order,
-        # try not to destroy the default index of the model.
-        # otherwise, multi-items could not be moved correctly.
-        for index in indexes[::-1]:
-            self.proxyModel.setData(index, key)
+    def slot_moveToGroup(self, toGroup, fromGroups=None):
+        '''move items from specified groups to target group
+           :param toGroup: target group
+           :param fromGroups: items in this groups will be moved,
+                    if fromGroup is empty, move selected items
+        '''
+        if fromGroups:
+            for i in range(self.sourceModel.rowCount()):
+                index = self.sourceModel.index(i, ItemModel.GROUP)
+                if index.data() in fromGroups:
+                    self.sourceModel.setData(index, toGroup)
+        else:
+            indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
+            # ATTENTION: performing the moving action in descent order,
+            # try not to destroy the default index of the model.
+            # otherwise, multi-items could not be moved correctly.
+            for index in indexes[::-1]:
+                self.proxyModel.setData(index, toGroup)
 
     def slot_attachTag(self, key):
         '''add tag to current item'''
@@ -311,62 +332,29 @@ class ItemTableView(QTableView):
 
         self.proxyModel.layoutChanged.emit()
 
-    def slot_removeTag(self, key):
-        '''delete tag from currently selected item'''
-        indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
-        for index in indexes[::-1]: # ATTENTION
-            keys = index.data()
-            if key in keys:
-                keys.pop(keys.index(key))
-                # if item tags are empty, set NOTAG then
-                if not keys:
-                    keys = [self.tagView.model().NOTAG]
-                self.proxyModel.setData(index, keys)
-
-    def slot_ungroupItems(self, keys):
-        '''move all items with specified groups list to ungrouped'''
-        for i in range(self.sourceModel.rowCount()):
-            index = self.sourceModel.index(i, ItemModel.GROUP)
-            if index.data() in keys:
-                self.sourceModel.setData(index, self.groupView.model().UNGROUPED) # Ungrouped
-
-    def slot_deleteItemsByGroup(self, key):
-        '''delete all items with specified group id'''
-
-        reply = QMessageBox.question(self, 'Confirm', 
-            "Confirm to delete all items in Trash? Items deleted by this operation can not be restored.",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-
-        if reply != QMessageBox.Yes:
-            return
-
-        # collect indexes to be removed
-        indexes = []
-        for i in range(self.sourceModel.rowCount()):
-            index = self.sourceModel.index(i, ItemModel.GROUP)
-            if index.data()==key:
-                indexes.append(index)
-
-        # delete
-        for index in indexes[::-1]:
-            self.sourceModel.removeRow(index.row())
-
-        # emit signal to request updating group/tag counter
-        if indexes:
-            self.itemsChanged.emit(self.sourceModel.serialize(save=False))
-
-    def slot_untagItems(self, key):
-        '''remove specified tag from all items'''
-        for i in range(self.sourceModel.rowCount()):
-            index = self.sourceModel.index(i, ItemModel.TAGS)
-            keys = index.data()
-            if key in keys:
-                keys.pop(keys.index(key))
-                # if item tags are empty, set NOTAG then
-                if not keys:
-                    keys = [self.tagView.model().NOTAG]
-                self.sourceModel.setData(index, keys)        
-
+    def slot_removeTag(self, tag, fromSelected=True):
+        '''delete tag from currently selected items by default, otherwise from all items'''
+        if fromSelected:
+            indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
+            for index in indexes[::-1]: # ATTENTION
+                keys = index.data()
+                if tag in keys:
+                    keys.pop(keys.index(tag))
+                    # if item tags are empty, set NOTAG then
+                    if not keys:
+                        keys = [self.tagView.model().NOTAG]
+                    self.proxyModel.setData(index, keys)
+        else:
+            for i in range(self.sourceModel.rowCount()):
+                index = self.sourceModel.index(i, ItemModel.TAGS)
+                keys = index.data()
+                if tag in keys:
+                    keys.pop(keys.index(tag))
+                    # if item tags are empty, set NOTAG then
+                    if not keys:
+                        keys = [self.tagView.model().NOTAG]
+                    self.sourceModel.setData(index, keys)
+    
     def slot_filterByGroup(self):
         '''triggered by group selection changed'''
         for groupIndex in self.groupView.selectedIndexes():
@@ -400,3 +388,6 @@ class ItemTableView(QTableView):
 
         # clear previous selection
         self.selectionModel().clear() 
+
+    def slot_findDuplicatedItems(self):
+        QMessageBox.question(self, 'Confirm', "TO BE CONTINUE", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
