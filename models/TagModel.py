@@ -93,16 +93,9 @@ class TagModel(TableModel):
                 key = self.dataList[row][TagModel.KEY] # KEY, NAME, COLOR
                 name = self.dataList[row][TagModel.NAME]
                 count = 0
-                # UNTAGGED: check empty tags list from items
-                if key==TagModel.NOTAG:
-                    for item in self.itemsList:
-                        if not item[2]:
-                            count += 1
-                # common tag
-                else:
-                    for item in self.itemsList:
-                        if key in item[2]: # 2=>TAGS
-                            count += 1
+                for item in self.itemsList:
+                    if key in item[2]: # 2=>TAGS
+                        count += 1
                 return '{0} ({1})'.format(name, count) if count else name
             else:
                 return self.dataList[row][col]

@@ -136,22 +136,21 @@ class ItemTableView(QTableView):
                 self.setupCascadeGroupMenu(sub_menu, children, keys)
 
     def setupTagsMenu(self, menu, addTagMenu, delTagMenu, currentTags):
-        '''attach oe detach tags for current item'''        
+        '''attach oe detach tags for current item'''
+        KEY, NAME, COLOR = self.tagView.model().KEY, self.tagView.model().NAME, self.tagView.model().COLOR
+
         for tag in self.tags():
-            # UNTAGGED
-            if tag[self.tagView.model().KEY] == self.tagView.model().NOTAG:
-                continue
 
             # set icon with bg-color same as tag
             pixmap = QPixmap(12, 12)
-            pixmap.fill(QColor(tag[2]))
+            pixmap.fill(QColor(tag[COLOR]))
 
             # tags not attached yet -> to be attached
-            if tag[0] not in currentTags:
-                action = addTagMenu.addAction(QIcon(pixmap), self.tr(tag[1]), partial(self.slot_attachTag, tag[0]))
+            if tag[KEY] not in currentTags:
+                action = addTagMenu.addAction(QIcon(pixmap), self.tr(tag[NAME]), partial(self.slot_attachTag, tag[KEY]))
             # current tags -> to be removed
             else:
-                action = delTagMenu.addAction(QIcon(pixmap), self.tr(tag[1]), partial(self.slot_removeTag, tag[0]))
+                action = delTagMenu.addAction(QIcon(pixmap), self.tr(tag[NAME]), partial(self.slot_removeTag, tag[KEY]))
 
         if addTagMenu.actions():
             menu.addMenu(addTagMenu)
@@ -231,9 +230,9 @@ class ItemTableView(QTableView):
             c_time = time.strftime('%Y-%m-%d',time.localtime(time.time()))
             if single:
                 path, name = dlg.values()
-                rows = [(name, group, [], path, c_time, '')]
+                rows = [(name, group, [self.tagView.model().NOTAG], path, c_time, '')]
             else:
-                rows = [(os.path.basename(path), group, [], path, c_time, '') for path in dlg.values()]
+                rows = [(os.path.basename(path), group, [self.tagView.model().NOTAG], path, c_time, '') for path in dlg.values()]
 
             # append to item table
             num_row = self.sourceModel.rowCount()
@@ -242,7 +241,6 @@ class ItemTableView(QTableView):
                     for j, col in enumerate(row):
                         index = self.sourceModel.index(num_row+i, j)
                         self.sourceModel.setData(index, col)
-
 
     def slot_navigateTo(self):
         '''open current item'''
@@ -287,26 +285,39 @@ class ItemTableView(QTableView):
     def slot_attachTag(self, key):
         '''add tag to current item'''
         indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
+        NOTAG = self.tagView.model().NOTAG
 
-        # if key=UNTAGGED, remove all tags
-        if key == self.tagView.model().NOTAG:
+        self.proxyModel.layoutAboutToBeChanged.emit()
+
+        if key == NOTAG:
             for index in indexes[::-1]:
-                self.proxyModel.setData(index, [])
+                # if key=NOTAG, remove all other tags
+                self.proxyModel.setData(index, [NOTAG])
         else:
             for index in indexes[::-1]: # ATTENTION
                 keys = index.data()
+
+                # remove NOTAG first
+                if NOTAG in keys:
+                    keys.pop(keys.index(NOTAG))
+
+                # then attach target tag
                 if key not in keys:
                     keys.append(key)
                     self.proxyModel.setData(index, keys)
-            self.proxyModel.layoutChanged.emit()
+
+        self.proxyModel.layoutChanged.emit()
 
     def slot_removeTag(self, key):
-        '''delete tag from current item'''
+        '''delete tag from currently selected item'''
         indexes = self.selectionModel().selectedRows(ItemModel.TAGS)
         for index in indexes[::-1]: # ATTENTION
             keys = index.data()
             if key in keys:
                 keys.pop(keys.index(key))
+                # if item tags are empty, set NOTAG then
+                if not keys:
+                    keys = [self.tagView.model().NOTAG]
                 self.proxyModel.setData(index, keys)
 
     def slot_ungroupItems(self, keys):
@@ -317,12 +328,15 @@ class ItemTableView(QTableView):
                 self.sourceModel.setData(index, self.groupView.model().UNGROUPED) # Ungrouped        
 
     def slot_untagItems(self, key):
-        '''remove specified tag from tags list of each item'''
+        '''remove specified tag from all items'''
         for i in range(self.sourceModel.rowCount()):
             index = self.sourceModel.index(i, ItemModel.TAGS)
             keys = index.data()
             if key in keys:
                 keys.pop(keys.index(key))
+                # if item tags are empty, set NOTAG then
+                if not keys:
+                    keys = [self.tagView.model().NOTAG]
                 self.sourceModel.setData(index, keys)        
 
     def slot_filterByGroup(self):

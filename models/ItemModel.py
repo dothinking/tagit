@@ -106,8 +106,6 @@ class SortFilterProxyModel(QSortFilterProxyModel):
             tags = self.sourceModel().index(sourceRow, ItemModel.TAGS, sourceParent).data()
             if tags==None or self.tagId==None:
                 return False
-            elif self.tagId==TagModel.NOTAG: # Untagged
-                return text_filter and tags==[]
             else:
                 return text_filter and self.tagId in tags
 
@@ -163,6 +161,10 @@ class ItemDelegate(QStyledItemDelegate):
             tags = index.model().index(index.row(), ItemModel.TAGS).data()
             allTags = self.allTags()
             for key in tags:
+
+                if key==TagModel.NOTAG: # do not draw tag for NOTAG itself
+                    continue
+
                 tag_name, color_name = allTags.get(key, (None, None))
                 if not tag_name or not color_name:
                     continue

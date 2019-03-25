@@ -197,5 +197,6 @@ class TagTableView(QTableView):
         '''update count of items for each group
            :param items: the latest items list
         '''
+        self.sourceModel.layoutAboutToBeChanged.emit()
         self.sourceModel.updateItems(items)
         self.sourceModel.layoutChanged.emit() # update display immediately
