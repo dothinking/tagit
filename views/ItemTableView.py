@@ -59,6 +59,9 @@ class ItemTableView(QTableView):
         self.sourceModel.dataChanged.connect(
             lambda: self.itemsChanged.emit(self.sourceModel.serialize(save=False))
             )
+        self.sourceModel.layoutChanged.connect(
+            lambda: self.itemsChanged.emit(self.sourceModel.serialize(save=False))
+            )
         self.itemsChanged.connect(self.groupView.slot_updateCounter)
         self.itemsChanged.connect(self.tagView.slot_updateCounter)
 
@@ -163,34 +166,39 @@ class ItemTableView(QTableView):
         menu = QMenu()
 
         indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
-        if indexes:
+
+        # refresh
+        menu.addAction(self.tr("Refresh"), self.sourceModel.refresh)
+
+        if indexes: # actions on index
             # group of current item
             gid = indexes[0].data()
 
             # tags of current item
-            tids = self.selectionModel().selectedRows(ItemModel.TAGS)[0].data()        
+            tids = self.selectionModel().selectedRows(ItemModel.TAGS)[0].data()
 
-            # open source path
-            menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
+            if gid != self.groupView.model().UNREFERENCED:
+                # open source path
+                menu.addAction(self.tr("Open Reference"), self.slot_navigateTo)
+                menu.addSeparator()
 
-            # menus on groups
-            menu.addSeparator()
-            move = QMenu(self.tr('Move to Group'))
-            groups = self.rootGroup()[self.groupView.model().CHILDREN]
-            
-            self.setupCascadeGroupMenu(move, groups, [gid, 
-                    self.groupView.model().UNREFERENCED,
-                    self.groupView.model().ALLGROUPS]) # 2->UNREFERENCED, 3->ALL GROUP
-            menu.addMenu(move)
+                # menus on groups            
+                move = QMenu(self.tr('Move to Group'))
+                groups = self.rootGroup()[self.groupView.model().CHILDREN]
+                
+                self.setupCascadeGroupMenu(move, groups, [gid, 
+                        self.groupView.model().UNREFERENCED,
+                        self.groupView.model().ALLGROUPS]) # 2->UNREFERENCED, 3->ALL GROUP
+                menu.addMenu(move)
+                menu.addSeparator()
 
-            # menus on tags
-            menu.addSeparator()
+            # menus on tags            
             addTag = QMenu(self.tr("Attach Tags"))
             delTag = QMenu(self.tr("Remove Tags"))
             self.setupTagsMenu(menu, addTag, delTag, tids)
-
-            # remove items
             menu.addSeparator()
+
+            # remove items            
             menu.addAction(self.tr("Remove Item"), self.slot_removeRows)
             
         else:
