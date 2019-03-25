@@ -74,7 +74,7 @@ class TagTableView(QTableView):
         act_rv = menu.addAction(self.tr("Remove Tag"), self.slot_removeRow)
 
         # set status
-        s = not self.sourceModel.isDefaultItem(indexes[0])
+        s = not self.sourceModel.isDefaultTag(indexes[0])
         act_rv.setEnabled(s)
 
         menu.exec_(self.viewport().mapToGlobal(position))
@@ -188,7 +188,7 @@ class TagTableView(QTableView):
             return
         
         key = self.sourceModel.index(index.row(), TagModel.KEY).data()
-        if not self.sourceModel.isDefaultItem(index): 
+        if not self.sourceModel.isDefaultTag(index): 
             self.sourceModel.removeRow(index.row())
             # emit removing group signal            
             self.tagRemoved.emit(key)

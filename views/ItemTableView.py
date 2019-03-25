@@ -155,7 +155,7 @@ class ItemTableView(QTableView):
         if addTagMenu.actions():
             menu.addMenu(addTagMenu)
 
-        if delTagMenu.actions():
+        if delTagMenu.actions() and not self.tagView.model().NOTAG in currentTags:
             menu.addMenu(delTagMenu)
 
     def customContextMenu(self, position):

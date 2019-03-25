@@ -63,7 +63,8 @@ class GroupItem(TreeItem):
     def serialize(self):
         '''store data'''
         res = self.itemData[:] # copy
-        res.append([child.serialize() for child in self.childItems])
+        # ignore default group
+        res.append([child.serialize() for child in self.childItems if child.itemData[GroupModel.KEY]>9])
 
         return res # key, name, children
 
@@ -78,7 +79,7 @@ class GroupModel(TreeModel):
     NAME, KEY, CHILDREN = range(3)
 
     # default groups
-    UNGROUPED, UNREFERENCED, ALLGROUPS = range(1,4)
+    ALLGROUPS, UNGROUPED, UNREFERENCED, DUPLICATED, TRASH = range(1,6)
 
     def __init__(self, header, parent=None):
         '''
@@ -89,10 +90,12 @@ class GroupModel(TreeModel):
         rootItem = GroupItem(header) # root item
         super(GroupModel, self).__init__(rootItem, parent)
 
-        self.defaultGroups = [
+        self.defaultGroups = [['All Groups', GroupModel.ALLGROUPS, [
             ['Ungrouped', GroupModel.UNGROUPED, []],
             ['Unreferenced', GroupModel.UNREFERENCED, []],
-            ['All Groups', GroupModel.ALLGROUPS, []]]
+            ['Duplicated', GroupModel.DUPLICATED, []],
+            ['Trash', GroupModel.TRASH, []]
+        ]]]
 
         self.initData()
 
@@ -104,38 +107,40 @@ class GroupModel(TreeModel):
         self._saveRequired = False  
         # reference item count for each group
         self.referenceList = []
+        # clear all groups first
+        self.rootItem.reset()
 
-    def setup(self, items=[], parent=None):
+    def setup(self, items=[]):
         '''setup model data for generating the tree
            :param items: list raw data for child items of parent, e.g.
                         [[key, name, [children]], ..., []]
-           :param parent: parent item
         '''
-        if not items:
-            items = self.defaultGroups
-
         # reset data within beginResetModel() and endResetModel(),
         # so that these model data could be updated explicitly
         self.beginResetModel()        
         self.initData()
-        self._setupData(items, parent)
+        self._setupData(self.defaultGroups, self.rootItem, True)
+        self._setupData(items, self.rootItem)
         self.endResetModel()
 
     def updateItems(self, items):
         '''items for counting'''
         self.referenceList = items
 
-    def _setupData(self, items, parent):
+    def _setupData(self, items, parent, default=False):
         '''setup model data for generating the tree
            :param items: list raw data for child items of parent, e.g.
                         [[name, key, [children]], ..., []]
            :param parent: parent item
+           :param default: if not default, :param items: should be checked ->
+                        0<key<10 is invalid, so these items should be ignored
         '''
-        if not parent:
-            parent = self.rootItem
-
-        parent.reset()
         for name, key, children in items:
+
+            # default group should not exist in user data 
+            if not default and 0<key<10:
+                continue
+
             # append item
             parent.insertChildren(parent.childCount(), 1, parent.columnCount())
             if self._currentKey < key:
@@ -146,18 +151,18 @@ class GroupModel(TreeModel):
             currentItem.setData(GroupModel.KEY, key)
 
             # setup child items
-            self._setupData(children, currentItem)
+            self._setupData(children, currentItem, default)
 
     def nextKey(self):
         '''next key for new item of this model'''
         self._currentKey += 1
         return self._currentKey
 
-    def isDefaultItem(self, index):
+    def isDefaultGroup(self, index):
         '''default item: 0<key<10'''
         if not index.isValid():
             return True
-        key = self.index(index.row(), GroupModel.KEY, index.parent()).data()
+        key = index.siblingAtColumn(GroupModel.KEY).data()
         return 0<key<10
 
     def saveRequired(self):
@@ -192,7 +197,7 @@ class GroupModel(TreeModel):
             return Qt.NoItemFlags
 
         # default items should not be modified
-        if self.isDefaultItem(index) or index.column()==GroupModel.KEY:
+        if self.isDefaultGroup(index) or index.column()==GroupModel.KEY:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -255,7 +260,7 @@ class GroupModel(TreeModel):
                 keys, name = group.keys(), group.data(col)
                 count = 0 # count
 
-                if keys==[GroupModel.ALLGROUPS]:
+                if GroupModel.ALLGROUPS in keys:
                     count = len(self.referenceList)
                 else:                
                     for item in self.referenceList:

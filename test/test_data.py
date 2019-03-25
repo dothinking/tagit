@@ -4,14 +4,14 @@ import os
 import time
 
 
-num = 10 # common groups start from key=11
+num = 9 # common groups start from key=11
 
 def randomColor():
     chars = ['1','2','3','4','5','6','7','8','9','A','B','C','D','E','F']
     colors =  [chars[random.randint(0,14)] for i in range(6)]
     return "#" + ''.join(colors)
 
-def fun_groups(res, level=4):
+def fun_groups(res, level):
 	if level==0:
 		return
 	global num	
@@ -30,7 +30,7 @@ def fun_items(max_item, max_group, max_tag):
 	c_time = time.strftime("%Y-%m-%d",time.localtime(time.time()))
 	return [[
 		"name_bla_bla_{0}".format(i+1), 
-		random.randint(1,max_group), 
+		random.randint(10,max_group), 
 		list(set([random.randint(1,max_tag) for k in range(random.randint(1,max_tag))])), 
 		scriptPath, 
 		c_time, 
@@ -38,12 +38,16 @@ def fun_items(max_item, max_group, max_tag):
 
 
 
-
 if __name__ == "__main__":
 
-	group_level, num_tag, num_item = 4, 10, 5000
+	group_level, num_tag, num_item = 2, 5, 10
 
-	groups=[['Ungrouped', 1, []], ['Unreferenced', 2, []], ['All Groups', 3, []]] # default groups
+	groups=[['All Groups', 1, [
+            ['Ungrouped', 2, []],
+            ['Unreferenced', 3, []],
+            ['Duplicated', 4, []],
+            ['Trash', 5, []]
+        ]]] # default groups
 	fun_groups(groups, group_level)
 
 	tags = [[0, 'NoTag', '#000000']] # default tag

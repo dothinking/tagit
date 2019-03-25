@@ -70,23 +70,28 @@ class GroupTreeView(QTreeView):
 
     def customContextMenu(self, position):
         '''show context menu'''
-        indexes = self.selectedIndexes()
-        if not len(indexes):
+        index = self.selectedIndex()
+        if not index:
             return
+
+        key = index.siblingAtColumn(GroupModel.KEY).data()
 
         # init context menu
         menu = QMenu()
-        menu.addAction(self.tr("Create Group"), self.slot_insertRow)
-        act_sb = menu.addAction(self.tr("Create Sub-Group"), self.slot_insertChild)
-        menu.addSeparator()
-        act_rv = menu.addAction(self.tr("Remove Group"), self.slot_removeRow)
 
-        # set status
-        s = not self.sourceModel.isDefaultItem(indexes[0])
-        act_sb.setEnabled(s)
-        act_rv.setEnabled(s)
+        if not self.sourceModel.isDefaultGroup(index):
+            menu.addAction(self.tr("Create Group"), self.slot_insertRow)
+            menu.addAction(self.tr("Create Sub-Group"), self.slot_insertChild)
+            menu.addSeparator()
+            menu.addAction(self.tr("Remove Group"), self.slot_removeRow)
+        else:
+            if key==GroupModel.ALLGROUPS:
+                menu.addAction(self.tr("Create Group"), self.slot_insertRow)
+            if key==GroupModel.TRASH:
+                menu.addAction(self.tr("Empty Trash"))
 
-        menu.exec_(self.viewport().mapToGlobal(position))
+        if menu.actions():
+            menu.exec_(self.viewport().mapToGlobal(position))
 
     # ---------------------------------------------------
     # drag and drop events
@@ -163,7 +168,7 @@ class GroupTreeView(QTreeView):
             return
 
         # could not insert sub-items to default items
-        if self.sourceModel.isDefaultItem(index):
+        if self.sourceModel.isDefaultGroup(index):
             return
 
         # insert
@@ -180,8 +185,13 @@ class GroupTreeView(QTreeView):
         if not index:
             return
 
+        # for default items, only ALLGROUPS is allowable to append siblings
+        key = index.siblingAtColumn(GroupModel.KEY).data()
+        if 1<key<10:
+            return
+
         # could not prepend item to default items
-        row = 3 if self.sourceModel.isDefaultItem(index) else index.row() + 1
+        row = index.row() + 1
         if self.sourceModel.insertRow(row, index.parent()):
             child_name = self.sourceModel.index(row, self.sourceModel.NAME, index.parent())
             child_key = self.sourceModel.index(row, self.sourceModel.KEY, index.parent())            
@@ -206,7 +216,7 @@ class GroupTreeView(QTreeView):
         
         # ATTENTION: get the key before any actions are applied to the tree model
         keys = index.internalPointer().keys()
-        if not self.sourceModel.isDefaultItem(index): 
+        if not self.sourceModel.isDefaultGroup(index): 
             self.sourceModel.removeRow(index.row(), index.parent())
             # emit removing group signal
             self.groupRemoved.emit(keys)

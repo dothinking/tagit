@@ -29,6 +29,9 @@ class TagModel(TableModel):
         # item count for each group
         self.itemsList = []
 
+        # reset all tags
+        self.dataList = self.defaultTags[:] # copy
+
 
     def getIndexByKey(self, key):
         '''get ModelIndex with specified key in the associated object'''
@@ -42,20 +45,20 @@ class TagModel(TableModel):
         '''setup model data:
            it is convenient to reset data after the model is created
         ''' 
-        if not tags:
-            tags = self.defaultTags
-
         # reset data
-        self.initData()
-
-        # calculate current key
-        for key, name, color in tags:
-            if self._currentKey<key:
-                self._currentKey = key
+        self.initData()       
 
         # reset model data
-        self.beginResetModel()        
-        self.dataList = tags        
+        self.beginResetModel()
+        for tag in tags:
+            key = tag[TagModel.KEY]
+            # ignore default tag from user data
+            if key==TagModel.NOTAG:
+                continue
+            # current key
+            if self._currentKey<key:
+                self._currentKey = key
+            self.dataList.append(tag)     
         self.endResetModel()
 
     def updateItems(self, items):
@@ -67,9 +70,18 @@ class TagModel(TableModel):
         self._currentKey += 1
         return self._currentKey 
 
-    def isDefaultItem(self, index):
+    def isDefaultTag(self, index):
         '''first row is default item -> No Tag'''
-        return index.row()==0 
+        return index.row()==TagModel.NOTAG
+
+    def serialize(self, save=True):
+        if save:
+            self._saveRequired = False # saved
+        return [item for item in self.dataList if item[TagModel.KEY]>TagModel.NOTAG]
+
+    # --------------------------------------------------------------
+    # reimplemented methods
+    # --------------------------------------------------------------
 
     def flags(self, index):
         '''item status'''

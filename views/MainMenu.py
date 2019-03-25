@@ -134,7 +134,7 @@ class MainMenu(object):
         group_activated = self.mainWindow.groupsView().hasFocus()
         for index in self.mainWindow.groupsView().selectedIndexes():
             group_selected = True
-            group_default = self.mainWindow.groupsView().model().isDefaultItem(index)
+            group_default = self.mainWindow.groupsView().model().isDefaultGroup(index)
             break
         else:
             group_selected = False
@@ -147,7 +147,7 @@ class MainMenu(object):
         tag_activated = self.mainWindow.tagsView().hasFocus()
         for index in self.mainWindow.tagsView().selectedIndexes():
             tag_selected = True
-            tag_default = self.mainWindow.tagsView().model().isDefaultItem(index)
+            tag_default = self.mainWindow.tagsView().model().isDefaultTag(index)
             break
         else:
             tag_selected = False
