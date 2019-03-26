@@ -387,4 +387,11 @@ class ItemTableView(QTableView):
         self.selectionModel().clear() 
 
     def slot_findDuplicatedItems(self):
-        QMessageBox.question(self, 'Confirm', "TO BE CONTINUE", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        # check duplicated items
+        self.sourceModel.checkDuplicated()
+
+        # set selected item        
+        index = self.groupView.model().getIndexByKey(self.groupView.model().DUPLICATED)
+        if index.isValid():
+            self.groupView.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
+            self.groupView.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)

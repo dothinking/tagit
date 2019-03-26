@@ -43,7 +43,6 @@ class ItemModel(TableModel):
         # if path is invalid but group is not (UNREFERENCED or TRASH), move group to UNREFERENCED
         # if path is valid but group is UNREFERENCED, move group to UNGROUPED
         self.layoutAboutToBeChanged.emit()
-
         for i, (_,group,_,path,*_) in enumerate(self.dataList):
 
             if path and not os.path.exists(path):
@@ -54,9 +53,27 @@ class ItemModel(TableModel):
             elif group==GroupModel.UNREFERENCED:                
                 self.dataList[i][ItemModel.GROUP] = GroupModel.UNGROUPED
                 self._saveRequired = True
+        self.layoutChanged.emit() # update table view
 
-        self.layoutChanged.emit() # update table view           
-        
+    def checkDuplicated(self):
+        '''move duplicated items to group DUPLICATED'''
+        self.layoutAboutToBeChanged.emit()
+
+        # name, path map for searching cretia
+        name_source_maps = [(name, source) for (name,_,_,source,*_) in self.dataList]
+
+        # find duplicated (count>1) from group not in DUPLICATED already
+        duplicated = [data for (name_source, data) in zip(name_source_maps, self.dataList) 
+            if data[ItemModel.GROUP] != GroupModel.DUPLICATED and name_source_maps.count(name_source)>1]
+
+        # move found items to DUPLICATED group    
+        for item in duplicated:
+            item[ItemModel.GROUP] = GroupModel.DUPLICATED
+
+        if duplicated:
+            self._saveRequired = True
+
+        self.layoutChanged.emit() # update table view
 
     def mimeTypes(self):
         return ['tagit-item']
