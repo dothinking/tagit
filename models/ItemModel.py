@@ -40,14 +40,14 @@ class ItemModel(TableModel):
     def refresh(self):
         '''check invalid source path'''
         # update source path status:
-        # if path is invalid but group is not UNREFERENCED, move group to UNREFERENCED
+        # if path is invalid but group is not (UNREFERENCED or TRASH), move group to UNREFERENCED
         # if path is valid but group is UNREFERENCED, move group to UNGROUPED
         self.layoutAboutToBeChanged.emit()
 
         for i, (_,group,_,path,*_) in enumerate(self.dataList):
 
             if path and not os.path.exists(path):
-                if self.dataList[i][ItemModel.GROUP] != GroupModel.UNREFERENCED:
+                if self.dataList[i][ItemModel.GROUP] not in (GroupModel.UNREFERENCED, GroupModel.TRASH):
                     self.dataList[i][ItemModel.GROUP] = GroupModel.UNREFERENCED
                     self._saveRequired = True
                 

@@ -140,16 +140,20 @@ class GroupTreeView(QTreeView):
         index = self.indexAt(e.pos())
 
         if index.isValid():
-            # target group should only be TRASH if target is default group
-            # as well as the right group which the dragging items belong to
+            # target group should only be TRASH if target is default group or item group is UNREFERENCED
+            # target group should not be the original group which the dragging items belong to
             itemData = e.mimeData().data('tagit-item')
             item_group = int(str(itemData, encoding='utf-8'))
             target_group = index.siblingAtColumn(self.sourceModel.KEY).data()
-            isDefault = self.sourceModel.isDefaultGroup(index)
 
-            if item_group!=target_group and (not isDefault or target_group==self.sourceModel.TRASH):
-                self.highlightRect = self.visualRect(index)
-                e.accept()
+            if item_group!=target_group:
+                if self.sourceModel.isDefaultGroup(index):
+                    if target_group==self.sourceModel.TRASH:
+                        self.highlightRect = self.visualRect(index)
+                        e.accept()
+                elif item_group!=self.sourceModel.UNREFERENCED:
+                    self.highlightRect = self.visualRect(index)
+                    e.accept()
 
         # trigger paint event to update view
         self.viewport().update()

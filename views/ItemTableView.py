@@ -169,9 +169,6 @@ class ItemTableView(QTableView):
 
         indexes = self.selectionModel().selectedRows(ItemModel.GROUP)
 
-        # refresh
-        menu.addAction(self.tr("Refresh"), self.sourceModel.refresh)        
-
         if indexes: # actions on index
             # group of current item
             gid = indexes[0].data()
@@ -208,11 +205,11 @@ class ItemTableView(QTableView):
             
         else:
             # create item
-            menu.addSeparator()
             menu.addAction(self.tr("New Item"), partial(self.slot_appendRows, True))
             menu.addAction(self.tr("Import Items"), partial(self.slot_appendRows, False))
             menu.addSeparator()
             menu.addAction(self.tr("Find Duplicated"), self.slot_findDuplicatedItems)
+            menu.addAction(self.tr("Find Unreferenced"), self.sourceModel.refresh)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
