@@ -7,9 +7,12 @@
     <file>images/sub_group.png</file>
     <file>images/del_group.png</file>
     <file>images/item.png</file>
+    <file>images/import_item.png</file>
     <file>images/edit_item.png</file>    
     <file>images/del_item.png</file>
     <file>images/item_source.png</file>
+    <file>images/item_unreferenced.png</file>
+    <file>images/item_duplicated.png</file>
     <file>images/tag.png</file>
     <file>images/del_tag.png</file>
   </qresource>

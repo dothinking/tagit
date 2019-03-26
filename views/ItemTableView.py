@@ -209,7 +209,7 @@ class ItemTableView(QTableView):
             menu.addAction(self.tr("Import Items"), partial(self.slot_appendRows, False))
             menu.addSeparator()
             menu.addAction(self.tr("Find Duplicated"), self.slot_findDuplicatedItems)
-            menu.addAction(self.tr("Find Unreferenced"), self.sourceModel.refresh)
+            menu.addAction(self.tr("Find Unreferenced"), self.slot_findUnreferencedItems)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
@@ -393,5 +393,23 @@ class ItemTableView(QTableView):
         # set selected item        
         index = self.groupView.model().getIndexByKey(self.groupView.model().DUPLICATED)
         if index.isValid():
+            tabWidget = self.groupView.parent()
+            if tabWidget.currentIndex() !=0:
+                tabWidget.setCurrentIndex(0) # activate group tree view
+
+            self.groupView.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
+            self.groupView.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
+
+    def slot_findUnreferencedItems(self):
+        # check unreferenced items
+        self.sourceModel.refresh()
+
+        # set selected item        
+        index = self.groupView.model().getIndexByKey(self.groupView.model().UNREFERENCED)
+        if index.isValid():
+            tabWidget = self.groupView.parent()
+            if tabWidget.currentIndex() !=0:
+                tabWidget.setCurrentIndex(0) # activate group tree view
+
             self.groupView.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
             self.groupView.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)

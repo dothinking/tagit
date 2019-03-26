@@ -30,15 +30,14 @@ class MainMenu(object):
                 (),
                 ('E&xit', self.mainWindow.close, 'Ctrl+Q'),
             ]),
-            ('&Edit',[
-                ('Refresh', self.mainWindow.itemsView().sourceModel.refresh, 'F5', 'item.png', 'Refresh items'),
-                (),
+            ('&Edit',[                
                 ('New Item', partial(self.mainWindow.itemsView().slot_appendRows, True), 'Ctrl+I', 'item.png', 'Create item'),
-                ('Import Items', partial(self.mainWindow.itemsView().slot_appendRows, False), None, 'item.png', 'Import items from selected path'),
-                ('Move to Trash', partial(self.mainWindow.itemsView().slot_moveToGroup, self.mainWindow.groupsView().model().TRASH), None, 'del_item.png', 'Solt delete: move items to trash'),
+                ('Import Items', partial(self.mainWindow.itemsView().slot_appendRows, False), None, 'import_item.png', 'Import items from selected path'),
+                ('Move to Trash', partial(self.mainWindow.itemsView().slot_moveToGroup, self.mainWindow.groupsView().model().TRASH), None, 'del_item.png', 'Soft delete: move items to trash'),
                 (),
                 ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_source.png', 'Open attached reference'),
-                ('Find Duplicated', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+D', 'item_source.png', 'Find duplicated items'),
+                ('Find Duplicated', self.mainWindow.itemsView().slot_findDuplicatedItems,'Ctrl+D', 'item_duplicated.png', 'Find duplicated items'),
+                ('Find Unreferenced', self.mainWindow.itemsView().slot_findUnreferencedItems, 'F5', 'item_unreferenced.png', 'Find unreferenced items'),
                 (),
                 ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
                 ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
@@ -139,11 +138,14 @@ class MainMenu(object):
         for index in self.mainWindow.groupsView().selectedIndexes():
             group_selected = True
             group_default = self.mainWindow.groupsView().model().isDefaultGroup(index)
+            key = index.siblingAtColumn(self.mainWindow.groupsView().model().KEY).data()
             break
         else:
             group_selected = False
             group_default = False
-        self.mapActions['new group'].setEnabled(group_activated and group_selected)
+            key = None
+        self.mapActions['new group'].setEnabled(group_activated and group_selected and 
+                                        (not group_default or key==self.mainWindow.groupsView().model().ALLGROUPS))
         self.mapActions['new sub-group'].setEnabled(group_activated and group_selected and not group_default)
         self.mapActions['remove group'].setEnabled(group_activated and group_selected and not group_default)
 
@@ -175,14 +177,12 @@ class MainMenu(object):
 
         # edit
         self.editToolBar = self.mainWindow.addToolBar('Edit')
-        self.editToolBar.addAction(self.mapActions['refresh'])
-
-        self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new item'])
         self.editToolBar.addAction(self.mapActions['import items'])
         self.editToolBar.addAction(self.mapActions['move to trash'])
         self.editToolBar.addAction(self.mapActions['open reference'])
         self.editToolBar.addAction(self.mapActions['find duplicated'])
+        self.editToolBar.addAction(self.mapActions['find unreferenced'])
 
         self.editToolBar.addSeparator()
         self.editToolBar.addAction(self.mapActions['new group'])
