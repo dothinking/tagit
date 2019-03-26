@@ -12,7 +12,7 @@ from models.TagModel import TagModel, TagDelegate
 
 class TagTableView(QTableView):
 
-    tagRemoved = pyqtSignal(int)
+    tagCleared = pyqtSignal(int)
     itemsDropped = pyqtSignal(int) # drag items to tag and drop
 
     def __init__(self, header, parent=None):
@@ -63,19 +63,19 @@ class TagTableView(QTableView):
 
     def customContextMenu(self, position):
         '''show context menu'''
-        indexes = self.selectedIndexes()
-        if not len(indexes):
+        # group at cursor position
+        index = self.indexAt(position)
+        if not index.isValid():
             return
 
         # init context menu
         menu = QMenu()
         menu.addAction(self.tr("Create Tag"), self.slot_insertRow)
         menu.addSeparator()
-        act_rv = menu.addAction(self.tr("Remove Tag"), self.slot_removeRow)
 
-        # set status
-        s = not self.sourceModel.isDefaultTag(indexes[0])
-        act_rv.setEnabled(s)
+        if not self.sourceModel.isDefaultTag(index):
+            menu.addAction(self.tr("Empty Tag"), self.slot_emptyTag)
+            menu.addAction(self.tr("Remove Tag"), self.slot_removeRow)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
@@ -188,7 +188,7 @@ class TagTableView(QTableView):
                 editWidget.editingFinished.connect(lambda:self.slot_finishedEditing(child_name))
 
     def slot_removeRow(self):
-        '''delete selected item'''
+        '''delete selected tag'''
         index = self.selectionModel().currentIndex()
 
         reply = QMessageBox.question(self, 'Confirm', self.tr(
@@ -203,7 +203,13 @@ class TagTableView(QTableView):
         if not self.sourceModel.isDefaultTag(index): 
             self.sourceModel.removeRow(index.row())
             # emit removing group signal            
-            self.tagRemoved.emit(key)
+            self.tagCleared.emit(key)
+
+    def slot_emptyTag(self):
+        '''remove selected tag from items'''
+        index = self.selectionModel().currentIndex()
+        key = self.sourceModel.index(index.row(), TagModel.KEY).data()
+        self.tagCleared.emit(key)
 
     def slot_updateCounter(self, items):
         '''update count of items for each group

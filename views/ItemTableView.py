@@ -51,8 +51,8 @@ class ItemTableView(QTableView):
 
     def setupSignalsAndSlots(self):
         # reset items when remove group/tag
-        self.groupView.groupRemoved.connect(partial(self.slot_moveToGroup, self.groupView.model().UNGROUPED))
-        self.tagView.tagRemoved.connect(partial(self.slot_removeTag, fromSelected=False))
+        self.groupView.groupCleared.connect(partial(self.slot_moveToGroup, self.groupView.model().TRASH))
+        self.tagView.tagCleared.connect(partial(self.slot_removeTag, fromSelected=False))
 
         # delete items in trash
         self.groupView.emptyTrash.connect(self.slot_deleteItems) 

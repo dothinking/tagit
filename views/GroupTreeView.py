@@ -10,7 +10,7 @@ from models.GroupModel import GroupModel
 
 class GroupTreeView(QTreeView):
 
-    groupRemoved = pyqtSignal(list)
+    groupCleared = pyqtSignal(list)
     emptyTrash = pyqtSignal(int)
     itemsDropped = pyqtSignal(int) # drag items to group and drop
 
@@ -71,23 +71,26 @@ class GroupTreeView(QTreeView):
 
     def customContextMenu(self, position):
         '''show context menu'''
-        index = self.selectedIndex()
-        if not index:
-            return
 
-        key = index.siblingAtColumn(GroupModel.KEY).data()
+        # group at cursor position
+        index = self.indexAt(position)
+        if not index.isValid():
+            return
 
         # init context menu
         menu = QMenu()
-
         if not self.sourceModel.isDefaultGroup(index):
             menu.addAction(self.tr("Create Group"), self.slot_insertRow)
             menu.addAction(self.tr("Create Sub-Group"), self.slot_insertChild)
             menu.addSeparator()
+            menu.addAction(self.tr("Empty Group"), self.slot_emptyGroup)
             menu.addAction(self.tr("Remove Group"), self.slot_removeRow)
         else:
+            key = index.siblingAtColumn(GroupModel.KEY).data()
+
             if key==GroupModel.ALLGROUPS:
                 menu.addAction(self.tr("Create Group"), self.slot_insertRow)
+
             if key==GroupModel.TRASH:
                 trash = menu.addAction(self.tr("Empty Trash"), lambda: self.emptyTrash.emit(key))
                 # no items in trash
@@ -216,15 +219,14 @@ class GroupTreeView(QTreeView):
             self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
 
     def slot_removeRow(self):
-        '''delete selected item'''
+        '''delete selected group'''
         index = self.selectedIndex()
         if not index:
             return
 
         reply = QMessageBox.question(self, 'Confirm', self.tr(
             "Confirm to remove '{0}' and all sub-groups under this group?\n"
-            "The reference items under this group will not be deleted,"
-            " but moved to UNGROUPED.".format(index.data(Qt.EditRole))), 
+            "The reference items under this group will be moved to Trash.".format(index.data(Qt.EditRole))), 
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply != QMessageBox.Yes:
@@ -235,7 +237,16 @@ class GroupTreeView(QTreeView):
         if not self.sourceModel.isDefaultGroup(index): 
             self.sourceModel.removeRow(index.row(), index.parent())
             # emit removing group signal
-            self.groupRemoved.emit(keys)
+            self.groupCleared.emit(keys)
+
+    def slot_emptyGroup(self):
+        '''move items from selected group to TRASH'''
+        index = self.selectedIndex()
+        if not index:
+            return
+
+        keys = index.internalPointer().keys()
+        self.groupCleared.emit(keys)
 
 
     def slot_updateCounter(self, items):
