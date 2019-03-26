@@ -112,37 +112,49 @@ class GroupTreeView(QTreeView):
             painter.drawRect(self.highlightRect)
 
     def dragEnterEvent(self, e):
+        '''accept drag event only if the mimedata is specified by user -> tagit-item'''
+        if e.mimeData().hasFormat('tagit-item'):
+            e.accept()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
         '''accept drag event only if 
            - the mimedata is specified by user -> tagit-item
-           - target group is not UNREFERENCED
+           - target group is not current item group
+           - target group is TRASH if target is default group
         '''
         # concern itemtable view only
         if not e.mimeData().hasFormat('tagit-item'):
             e.ignore()
             return
 
+        # ignore current drag by default
+        self.highlightRect = QRect() # QRect of current tree item
+        e.ignore()
+
         # tree view item right in current cursor
         index = self.indexAt(e.pos())
-        if not index.isValid():
-            e.ignore()
-            return
 
-        # target group should not be UNREFERENCED,
-        # as well as the right group which the dragging items belong to
-        itemData = e.mimeData().data('tagit-item')
-        current_group = int(str(itemData, encoding='utf-8'))
-        key = index.siblingAtColumn(self.sourceModel.KEY).data()
-        if key not in (current_group, self.sourceModel.ALLGROUPS, self.sourceModel.UNREFERENCED, self.sourceModel.DUPLICATED):
-            self.highlightRect = self.visualRect(index) # QRect of current tree item
-            self.viewport().update() # trigger paint event to update view
-            e.accept()
-        else:
-            self.highlightRect = QRect()
-            self.viewport().update()
-            e.ignore()
+        if index.isValid():
+            # target group should only be TRASH if target is default group
+            # as well as the right group which the dragging items belong to
+            itemData = e.mimeData().data('tagit-item')
+            item_group = int(str(itemData, encoding='utf-8'))
+            target_group = index.siblingAtColumn(self.sourceModel.KEY).data()
+            isDefault = self.sourceModel.isDefaultGroup(index)
 
-    def dragMoveEvent(self, e):
-        self.dragEnterEvent(e)
+            if item_group!=target_group and (not isDefault or target_group==self.sourceModel.TRASH):
+                self.highlightRect = self.visualRect(index)
+                e.accept()
+
+        # trigger paint event to update view
+        self.viewport().update()
+
+    def dragLeaveEvent(self, e):
+        self.highlightRect = QRect()
+        self.viewport().update()
+        e.accept()        
 
     def dropEvent(self, e):
         '''accept drag event only if the mimedata is specified type defined by user'''        
