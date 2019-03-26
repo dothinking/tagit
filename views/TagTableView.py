@@ -94,30 +94,42 @@ class TagTableView(QTableView):
             painter.drawRect(self.highlightRect)
 
     def dragEnterEvent(self, e):
+        '''accept drag event only if the mimedata is specified by user -> tagit-item'''
+        if e.mimeData().hasFormat('tagit-item'):
+            e.accept()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
         '''accept drag event when the mimedata is specified by user -> tagit-item'''
-        # concern itemtable view only
+
+        # concern item table view only
         if not e.mimeData().hasFormat('tagit-item'):
             e.ignore()
             return
 
         # tree view item right in current cursor
         index = self.indexAt(e.pos())
-        if not index.isValid():
+        if index.isValid():
+            # calculate row region
+            index_name = index.siblingAtColumn(self.sourceModel.NAME)
+            index_color = index.siblingAtColumn(self.sourceModel.COLOR)
+            rect_name = self.visualRect(index_name)
+            rect_color = self.visualRect(index_color)
+
+            self.highlightRect = rect_name.united(rect_color) # current tag region            
+            e.accept()
+        else:
+            self.highlightRect = QRect()
             e.ignore()
-            return
 
-        # calculate row region
-        index_name = index.siblingAtColumn(self.sourceModel.NAME)
-        index_color = index.siblingAtColumn(self.sourceModel.COLOR)
-        rect_name = self.visualRect(index_name)
-        rect_color = self.visualRect(index_color)
-
-        self.highlightRect = rect_name.united(rect_color) # current tag region
         self.viewport().update() # trigger paint event to update view
+
+    def dragLeaveEvent(self, e):
+        self.highlightRect = QRect()
+        self.viewport().update()
         e.accept()
 
-    def dragMoveEvent(self, e):
-        self.dragEnterEvent(e)
 
     def dropEvent(self, e):
         '''accept drag event only if the mimedata is specified type defined by user'''        
