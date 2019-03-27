@@ -58,7 +58,7 @@ class MainMenu(object):
         # menu enabled status
         self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
         self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.refreshMenus)
-        self.mainWindow.groupsView().parent().currentChanged.connect(self.refreshItems) # tabwidget
+        self.mainWindow.tabViews().currentChanged.connect(self.refreshItems) # tabwidget
         QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
 
         # preference item signals

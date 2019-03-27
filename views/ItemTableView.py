@@ -18,13 +18,15 @@ class ItemTableView(QTableView):
 
     itemsChanged = pyqtSignal(list) # signal for group/tag to update counting
 
-    def __init__(self, header, groupView, tagView, parent=None):
+    def __init__(self, header, tabViews, parent=None):
         super(ItemTableView, self).__init__(parent)
 
         self.setObjectName("itemTable") # for qss
 
-        self.groupView = groupView
-        self.tagView = tagView        
+        # group tree view and tag table view are sub-tabs of tabWidget
+        self.tabViews = tabViews
+        self.groupView = tabViews.widget(0)
+        self.tagView = tabViews.widget(1)        
 
         # source model
         self.sourceModel = ItemModel(header)
@@ -393,9 +395,8 @@ class ItemTableView(QTableView):
         # set selected item        
         index = self.groupView.model().getIndexByKey(self.groupView.model().DUPLICATED)
         if index.isValid():
-            tabWidget = self.groupView.parent()
-            if tabWidget.currentIndex() !=0:
-                tabWidget.setCurrentIndex(0) # activate group tree view
+            if self.tabViews.currentIndex() !=0:
+                self.tabViews.setCurrentIndex(0) # activate group tree view
 
             self.groupView.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
             self.groupView.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
@@ -407,9 +408,8 @@ class ItemTableView(QTableView):
         # set selected item        
         index = self.groupView.model().getIndexByKey(self.groupView.model().UNREFERENCED)
         if index.isValid():
-            tabWidget = self.groupView.parent()
-            if tabWidget.currentIndex() !=0:
-                tabWidget.setCurrentIndex(0) # activate group tree view
+            if self.tabViews.currentIndex() !=0:
+                self.tabViews.setCurrentIndex(0) # activate group tree view
 
             self.groupView.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)
             self.groupView.selectionModel().select(index, QItemSelectionModel.ClearAndSelect|QItemSelectionModel.Rows)

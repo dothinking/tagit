@@ -61,6 +61,9 @@ class MainWindow(QMainWindow):
     def propertyView(self):
         return self.dockProperty
 
+    def tabViews(self):
+        return self.tabWidget
+
     def database(self):
         return self._database 
 
@@ -153,16 +156,16 @@ class MainWindow(QMainWindow):
     def serialize(self, filename):
         '''save project data to database'''
         # current group
-        if self.groupsTreeView.selectedIndexes():
-            name_index = self.groupsTreeView.selectedIndexes()[0]
-            selected_group = name_index.siblingAtColumn(GroupModel.KEY).data()
+        for index in self.groupsTreeView.selectedIndexes():
+            selected_group = index.siblingAtColumn(GroupModel.KEY).data()
+            break
         else:
             selected_group = self.groupsTreeView.model().ALLGROUPS
 
         # current tag
-        if self.tagsTableView.selectedIndexes():
-            name_index = self.tagsTableView.selectedIndexes()[0]
-            selected_tag = name_index.siblingAtColumn(TagModel.KEY).data()
+        for index in self.tagsTableView.selectedIndexes():
+            selected_tag = index.siblingAtColumn(TagModel.KEY).data()
+            break
         else:
             selected_tag = TagModel.NOTAG
 
@@ -202,19 +205,20 @@ class MainWindow(QMainWindow):
         '''create main views'''
 
         # left widgets
-        tabWidget = QTabWidget()
-        self.groupsTreeView = GroupTreeView(['Group', 'Key'], tabWidget) # groups tree view        
-        self.tagsTableView = TagTableView(['KEY', 'TAG', 'COLOR'], tabWidget) # tags table view
-        tabWidget.addTab(self.groupsTreeView, "Groups")
-        tabWidget.addTab(self.tagsTableView, "Tags")
+        self.tabWidget = QTabWidget()
+        self.groupsTreeView = GroupTreeView(['Group', 'Key']) # groups tree view        
+        self.tagsTableView = TagTableView(['KEY', 'TAG', 'COLOR']) # tags table view
+        self.tabWidget.addTab(self.groupsTreeView, "Groups")
+        self.tabWidget.addTab(self.tagsTableView, "Tags")
+
 
         # central widgets: reference item table widget
         headers = ['Item Title', 'Group', 'Tags', 'Path', 'Create Date', 'Notes']
-        self.itemsTableView = ItemTableView(headers, self.groupsTreeView, self.tagsTableView) 
+        self.itemsTableView = ItemTableView(headers, self.tabWidget) 
 
         # arranged views
         splitter = QSplitter()        
-        splitter.addWidget(tabWidget)
+        splitter.addWidget(self.tabWidget)
         splitter.addWidget(self.itemsTableView)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
