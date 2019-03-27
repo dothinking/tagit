@@ -5,7 +5,8 @@ from functools import partial
 
 from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import (QIcon, QKeySequence)
-from PyQt5.QtWidgets import (QApplication, QWidget, QSizePolicy, QFileDialog, QMessageBox, QAction, QLineEdit)
+from PyQt5.QtWidgets import (QApplication, QWidget, QSizePolicy, 
+    QFileDialog, QMessageBox, QAction, QLineEdit)
 
 import views.resources
 
@@ -17,6 +18,10 @@ class MainMenu(object):
         scriptPath = os.path.dirname(os.path.abspath(__file__))
         self._rootPath = os.path.dirname(scriptPath)
         self._styleSheet = None
+
+        self.groupsView = parent.groupsView()
+        self.tagsView = parent.tagsView()
+        self.itemsView = parent.itemsView()
 
         # menu: (text, [sub actions])
         # action: (text, slot, shortcut, icon, tips)
@@ -31,20 +36,20 @@ class MainMenu(object):
                 ('E&xit', self.mainWindow.close, 'Ctrl+Q'),
             ]),
             ('&Edit',[                
-                ('New Item', partial(self.mainWindow.itemsView().slot_appendRows, True), 'Ctrl+I', 'item.png', 'Create item'),
-                ('Import Items', partial(self.mainWindow.itemsView().slot_appendRows, False), None, 'import_item.png', 'Import items from selected path'),
-                ('Move to Trash', partial(self.mainWindow.itemsView().slot_moveToGroup, self.mainWindow.groupsView().model().TRASH), None, 'del_item.png', 'Soft delete: move items to trash'),
+                ('New Item', partial(self.itemsView.slot_appendRows, True), 'Ctrl+I', 'item.png', 'Create item'),
+                ('Import Items', partial(self.itemsView.slot_appendRows, False), None, 'import_item.png', 'Import items from selected path'),
+                ('Move to Trash', partial(self.itemsView.slot_moveToGroup, self.groupsView.model().TRASH), None, 'del_item.png', 'Soft delete: move items to trash'),
                 (),
-                ('Open Reference', self.mainWindow.itemsView().slot_navigateTo,'Ctrl+R', 'item_source.png', 'Open attached reference'),
-                ('Find Duplicated', self.mainWindow.itemsView().slot_findDuplicatedItems,'Ctrl+D', 'item_duplicated.png', 'Find duplicated items'),
-                ('Find Unreferenced', self.mainWindow.itemsView().slot_findUnreferencedItems, 'F5', 'item_unreferenced.png', 'Find unreferenced items'),
+                ('Open Reference', self.itemsView.slot_navigateTo,'Ctrl+R', 'item_source.png', 'Open attached reference'),
+                ('Find Duplicated', self.itemsView.slot_findDuplicatedItems,'Ctrl+D', 'item_duplicated.png', 'Find duplicated items'),
+                ('Find Unreferenced', self.itemsView.slot_findUnreferencedItems, 'F5', 'item_unreferenced.png', 'Find unreferenced items'),
                 (),
-                ('New Group', self.mainWindow.groupsView().slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
-                ('New Sub-Group', self.mainWindow.groupsView().slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
-                ('Remove Group', self.mainWindow.groupsView().slot_removeRow, None, 'del_group.png','Delete selected group'),
+                ('New Group', self.groupsView.slot_insertRow, 'Ctrl+G', 'group.png', 'Create group'),
+                ('New Sub-Group', self.groupsView.slot_insertChild, None, 'sub_group.png', 'Create sub-group'),                
+                ('Remove Group', self.groupsView.slot_removeRow, None, 'del_group.png','Delete selected group'),
                 (),
-                ('New Tag', self.mainWindow.tagsView().slot_insertRow, 'Ctrl+T', 'tag.png', 'Create tag'),
-                ('Remove Tag', self.mainWindow.tagsView().slot_removeRow, None, 'del_tag','Delete selected tag'),
+                ('New Tag', self.tagsView.slot_insertRow, 'Ctrl+T', 'tag.png', 'Create tag'),
+                ('Remove Tag', self.tagsView.slot_removeRow, None, 'del_tag','Delete selected tag'),
             ]),
             ('&View', [
                 ('Style', self.getStyleSheetNames())
@@ -56,13 +61,13 @@ class MainMenu(object):
         self.mapActions = {} # name -> action/menu
 
         # menu enabled status
-        self.mainWindow.groupsView().selectionModel().selectionChanged.connect(self.refreshMenus)
-        self.mainWindow.tagsView().selectionModel().selectionChanged.connect(self.refreshMenus)
+        self.groupsView.selectionModel().selectionChanged.connect(self.refreshMenus)
+        self.tagsView.selectionModel().selectionChanged.connect(self.refreshMenus)
         self.mainWindow.tabViews().currentChanged.connect(self.refreshItems) # tabwidget
         QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
 
         # preference item signals
-        self.mainWindow.itemsView().selectionModel().selectionChanged.connect(self.slot_selected_item_changed)
+        self.itemsView.selectionModel().selectionChanged.connect(self.slot_selected_item_changed)
 
         # search items
         self.searchEdit = QLineEdit()
@@ -134,26 +139,26 @@ class MainMenu(object):
     def refreshMenus(self):
         '''set enable status of menu actions'''
         # groups menu
-        group_activated = self.mainWindow.groupsView().hasFocus()
-        for index in self.mainWindow.groupsView().selectedIndexes():
+        group_activated = self.groupsView.hasFocus()
+        for index in self.groupsView.selectedIndexes():
             group_selected = True
-            group_default = self.mainWindow.groupsView().model().isDefaultGroup(index)
-            key = index.siblingAtColumn(self.mainWindow.groupsView().model().KEY).data()
+            group_default = self.groupsView.model().isDefaultGroup(index)
+            key = index.siblingAtColumn(self.groupsView.model().KEY).data()
             break
         else:
             group_selected = False
             group_default = False
             key = None
         self.mapActions['new group'].setEnabled(group_activated and group_selected and 
-                                        (not group_default or key==self.mainWindow.groupsView().model().ALLGROUPS))
+                                        (not group_default or key==self.groupsView.model().ALLGROUPS))
         self.mapActions['new sub-group'].setEnabled(group_activated and group_selected and not group_default)
         self.mapActions['remove group'].setEnabled(group_activated and group_selected and not group_default)
 
         # tags menu
-        tag_activated = self.mainWindow.tagsView().hasFocus()
-        for index in self.mainWindow.tagsView().selectedIndexes():
+        tag_activated = self.tagsView.hasFocus()
+        for index in self.tagsView.selectedIndexes():
             tag_selected = True
-            tag_default = self.mainWindow.tagsView().model().isDefaultTag(index)
+            tag_default = self.tagsView.model().isDefaultTag(index)
             break
         else:
             tag_selected = False
@@ -162,8 +167,8 @@ class MainMenu(object):
         self.mapActions['remove tag'].setEnabled(tag_activated and tag_selected and not tag_default)
 
         # items menu
-        item_activated = self.mainWindow.itemsView().hasFocus()
-        item_selected = not self.mainWindow.itemsView().selectionModel().selection().isEmpty()
+        item_activated = self.itemsView.hasFocus()
+        item_selected = not self.itemsView.selectionModel().selection().isEmpty()
         self.mapActions['move to trash'].setEnabled(item_activated and item_selected)
         self.mapActions['open reference'].setEnabled(item_activated and item_selected)
 
@@ -228,9 +233,9 @@ class MainMenu(object):
 
     def refreshItems(self, index):
         if index==0:
-            self.mainWindow.itemsView().slot_filterByGroup()
+            self.itemsView.slot_filterByGroup()
         else:
-            self.mainWindow.itemsView().slot_filterByTag()
+            self.itemsView.slot_filterByTag()
 
     def new(self):
         if self.maybeSave():
@@ -318,14 +323,14 @@ class MainMenu(object):
         self.refreshMenus()
 
         # current index
-        for index in self.mainWindow.itemsView().selectedIndexes():
+        for index in self.itemsView.selectedIndexes():
             break
         else:
             index = None
 
         # show path of current reference item in status bar
         if index:
-            path_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.PATH)
+            path_index = index.siblingAtColumn(self.itemsView.sourceModel.PATH)
             path = path_index.data()
         else:
             path = ''
@@ -333,8 +338,8 @@ class MainMenu(object):
 
         # show detailed information of current item in dock view
         if index:
-            name_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.NAME)
-            note_index = index.siblingAtColumn(self.mainWindow.itemsView().sourceModel.NOTES)
+            name_index = index.siblingAtColumn(self.itemsView.sourceModel.NAME)
+            note_index = index.siblingAtColumn(self.itemsView.sourceModel.NOTES)
             name = name_index.data()
             note = note_index.data()
         else:
@@ -344,4 +349,4 @@ class MainMenu(object):
 
     def slot_search(self):
         regExp = QRegExp(self.searchEdit.text(), Qt.CaseInsensitive, QRegExp.Wildcard)
-        self.mainWindow.itemsView().model().setFilterRegExp(regExp)
+        self.itemsView.model().setFilterRegExp(regExp)
