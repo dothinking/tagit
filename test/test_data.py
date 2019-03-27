@@ -11,6 +11,11 @@ def randomColor():
     colors =  [chars[random.randint(0,14)] for i in range(6)]
     return "#" + ''.join(colors)
 
+def randomInt(lbound, ubound=None):
+	if ubound==None:
+		lbound, ubound = 1, lbound
+	return random.randint(lbound, ubound)
+
 def fun_groups(res, level):
 	if level==0:
 		return
@@ -29,18 +34,18 @@ def fun_items(max_item, max_group, max_tag):
 	scriptPath = os.path.dirname(os.path.abspath(__file__))
 	c_time = time.strftime("%Y-%m-%d",time.localtime(time.time()))
 	return [[
-		"name_bla_bla_{0}".format(i+1), 
-		random.randint(10,max_group), 
-		list(set([random.randint(1,max_tag) for k in range(random.randint(1,max_tag))])), 
-		scriptPath, 
+		"name_{0}_{1}".format('bla'*randomInt(3), randomInt(max_item)), # make duplicated items
+		randomInt(10,max_group), 
+		list(set([randomInt(max_tag) for k in range(randomInt(max_tag))])), # random tags
+		scriptPath if randomInt(10)>5 else 'it/is/aninvalid/path', # invalid path in some probability
 		c_time, 
-		"blablabla" if random.randint(1,10)>5 else "hiahiahia"] for i in range(max_item)]
+		'{0},{1}'.format("bla"*randomInt(5), "hia"*randomInt(0,5))] for i in range(max_item)]
 
 
 
 if __name__ == "__main__":
 
-	group_level, num_tag, num_item = 2, 5, 10
+	group_level, num_tag, num_item = 3, 10, 1000
 
 	groups=[['All Groups', 1, [
             ['Ungrouped', 2, []],
