@@ -1,6 +1,7 @@
+
 from PyQt5.QtCore import Qt, QSettings
-from PyQt5.QtWidgets import (QApplication, QWidget, QTabWidget, QAction, QDockWidget,
-    QFileDialog, QMainWindow, QMessageBox, QSplitter, QTextEdit, QStackedWidget)
+from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, 
+    QTabWidget, QDockWidget, QMessageBox, QSplitter)
 
 import os
 import pickle
@@ -181,7 +182,6 @@ class MainWindow(QMainWindow):
                 'selected_style': self.main_menu.getCurrentSheetStyle(),
             },
         }
-        print(data)
 
         # dump pickle file
         try:

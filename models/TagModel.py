@@ -1,7 +1,7 @@
 # model, delegate for Tags table view
 # 
 
-from PyQt5.QtCore import QModelIndex, Qt, QRect, QEvent, QSize
+from PyQt5.QtCore import QModelIndex, Qt, QSize
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QStyledItemDelegate, QStyle, QColorDialog
 
@@ -82,16 +82,20 @@ class TagModel(TableModel):
     # --------------------------------------------------------------
     # reimplemented methods
     # --------------------------------------------------------------
-
     def flags(self, index):
         '''item status'''
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        if index.row()==0 or index.column() != TagModel.NAME:
+        # could not edit/drop if not NAME
+        if index.column() != TagModel.NAME:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        # default tag is not editable
+        if self.isDefaultTag(index):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled        
+
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
 
     def data(self, index, role=Qt.DisplayRole):
         '''Table view could get data from this model'''
@@ -117,6 +121,19 @@ class TagModel(TableModel):
         else:
             return None
 
+    # implement drop methods
+    def canDropMimeData(self, data, action, row, column, parent):
+        # accept item table only
+        if not data.hasFormat('tagit-item'):
+            return False
+
+        # can drop exactly on the group
+        # row=-1, column=-1 => drop as child of parent => drop exactly on parent
+        # row>=0, column>=0, drop at index(row, column, parent)
+        if not parent.isValid() or row != -1:
+            return False
+
+        return True
 
 class TagDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):

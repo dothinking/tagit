@@ -3,9 +3,8 @@
 # 
 import random
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, QRect, pyqtSignal
-from PyQt5.QtWidgets import (QColorDialog,QHeaderView, QTableView, QMenu, QAction, QMessageBox)
-from PyQt5.QtGui import QColor, QPainter, QPalette
+from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
+from PyQt5.QtWidgets import (QHeaderView, QTableView, QMenu, QAction, QMessageBox)
 
 from models.TagModel import TagModel, TagDelegate
 
@@ -43,7 +42,6 @@ class TagTableView(QTableView):
 
         # drop
         self.setAcceptDrops(True)
-        self.highlightRect = QRect() # show drop indicator
 
         self.setSelectionMode(QTableView.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectRows)
@@ -82,71 +80,22 @@ class TagTableView(QTableView):
     # ---------------------------------------------------
     # drag events
     # ---------------------------------------------------
-    def paintEvent(self, e):
-        # default paint event
-        super(TagTableView, self).paintEvent(e)
-
-        # draw droping indicator
-        if self.highlightRect.isValid():
-            painter = QPainter(self.viewport()) # painter applying on viewpoint
-            color = self.viewport().palette().color(QPalette.Highlight) # highlight
-            painter.setPen(color)
-            painter.drawRect(self.highlightRect)
-
     def dragEnterEvent(self, e):
-        '''accept drag event only if the mimedata is specified by user -> tagit-item'''
-        if e.mimeData().hasFormat('tagit-item'):
-            e.accept()
-        else:
-            e.ignore()
-
-    def dragMoveEvent(self, e):
-        '''accept drag event when the mimedata is specified by user -> tagit-item'''
-
-        # concern item table view only
-        if not e.mimeData().hasFormat('tagit-item'):
-            e.ignore()
-            return
-
-        # tree view item right in current cursor
-        index = self.indexAt(e.pos())
-        if index.isValid():
-            # calculate row region
-            index_name = index.siblingAtColumn(self.sourceModel.NAME)
-            index_color = index.siblingAtColumn(self.sourceModel.COLOR)
-            rect_name = self.visualRect(index_name)
-            rect_color = self.visualRect(index_color)
-
-            self.highlightRect = rect_name.united(rect_color) # current tag region            
-            e.accept()
-        else:
-            self.highlightRect = QRect()
-            e.ignore()
-
-        self.viewport().update() # trigger paint event to update view
-
-    def dragLeaveEvent(self, e):
-        self.highlightRect = QRect()
-        self.viewport().update()
-        e.accept()
-
+        '''it is implemented in model, but pay attention that in case
+           dragging item from other widget, we must accept this event first.
+        '''
+        e.acceptProposedAction()
 
     def dropEvent(self, e):
-        '''accept drag event only if the mimedata is specified type defined by user'''        
-        if not e.mimeData().hasFormat('tagit-item'):
-            e.ignore()
-            return
-
-        # target tag
+        '''accept drag event'''
         index = self.indexAt(e.pos())
-        key = index.siblingAtColumn(self.sourceModel.KEY).data()
-        self.itemsDropped.emit(key)
+        if self.sourceModel.canDropMimeData(e.mimeData(), None, -1, -1, index):            
+            key = index.siblingAtColumn(TagModel.KEY).data()
+            self.itemsDropped.emit(key)
+            e.accept()
+        else:
+            e.ignore()
 
-        # clear droping indicator
-        self.highlightRect = QRect()
-        self.viewport().update()
-
-        e.accept()  
 
     # ---------------------------------------------------
     # slots
@@ -163,7 +112,7 @@ class TagTableView(QTableView):
 
     def slot_insertRow(self):
         '''inset item at the same level with current selected item'''
-        for index in self.selectionModel().selectedRows(self.sourceModel.KEY):
+        for index in self.selectionModel().selectedRows(TagModel.KEY):
             break
         else:
             return
