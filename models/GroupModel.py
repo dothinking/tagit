@@ -79,7 +79,7 @@ class GroupModel(TreeModel):
     NAME, KEY, CHILDREN = range(3)
 
     # default groups
-    ALLGROUPS, UNGROUPED, UNREFERENCED, DUPLICATED, TRASH = range(1,6)
+    ALLGROUPS, UNGROUPED, UNREFERENCED, DUPLICATED, TRASH = range(1,6)    
 
     def __init__(self, header, parent=None):
         '''
@@ -194,40 +194,13 @@ class GroupModel(TreeModel):
     def flags(self, index):
         '''tree item status'''
         if not index.isValid():
-            return Qt.NoItemFlags
+            return Qt.ItemIsDropEnabled
 
         # default items should not be modified
         if self.isDefaultGroup(index) or index.column()==GroupModel.KEY:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
         else:
-            return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-    def insertRows(self, position, rows, parent=QModelIndex()):
-        '''insert rows'''
-        parentItem = self.getItem(parent)
-        self.beginInsertRows(parent, position, position + rows - 1)
-        success = parentItem.insertChildren(position, rows, self.rootItem.columnCount())
-        self.endInsertRows()
-
-        # flag for saving model
-        if success:
-            self._saveRequired = True
-
-        return success
-    
-    def removeRows(self, position, rows, parent=QModelIndex()):
-        '''remove rows starting from given position'''
-        
-        self.beginRemoveRows(parent, position, position+rows-1)
-        parentItem = self.getItem(parent)
-        success = parentItem.removeChildren(position, rows)
-        self.endRemoveRows()
-
-        # flag for saving model
-        if success:
-            self._saveRequired = True           
-
-        return success
+            return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
 
     def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
         '''edit headers at given column as specified value.
@@ -293,6 +266,64 @@ class GroupModel(TreeModel):
             self.dataChanged.emit(index, index)
 
         return result
+
+    def insertRows(self, position, rows, parent=QModelIndex()):
+        '''insert rows'''
+        parentItem = self.getItem(parent)
+        self.beginInsertRows(parent, position, position + rows - 1)
+        success = parentItem.insertChildren(position, rows, self.rootItem.columnCount())
+        self.endInsertRows()
+
+        # flag for saving model
+        if success:
+            self._saveRequired = True
+
+        return success
+    
+    def removeRows(self, position, rows, parent=QModelIndex()):
+        '''remove rows starting from given position'''
+        
+        self.beginRemoveRows(parent, position, position+rows-1)
+        parentItem = self.getItem(parent)
+        success = parentItem.removeChildren(position, rows)
+        self.endRemoveRows()
+
+        # flag for saving model
+        if success:
+            self._saveRequired = True           
+
+        return success
+
+    # implement drop methods
+    def canDropMimeData(self, data, action, row, column, parent):
+
+        # accept item table only
+        if not data.hasFormat('tagit-item'):
+            return False
+
+        # can drop exactly on the group
+        # row=-1, column=-1 => drop as child of parent => drop exactly on parent
+        # row>=0, column>=0, drop at index(row, column, parent)
+        if not parent.isValid() or row != -1:
+            return False        
+        
+        target_group = parent.siblingAtColumn(GroupModel.KEY).data()
+        itemData = data.data('tagit-item')
+        item_group = int(str(itemData, encoding='utf-8'))        
+
+        # target group should not be the original group which the dragging items belong to
+        if item_group==target_group:
+            return False
+
+        # target group should only be TRASH if target is default group
+        if self.isDefaultGroup(parent) and target_group!=GroupModel.TRASH:
+            return False
+        
+        # target group should only be TRASH if item group is UNREFERENCED
+        if item_group==GroupModel.UNREFERENCED and target_group!=GroupModel.TRASH:
+            return False
+
+        return True
 
 
 if __name__ == '__main__':

@@ -2,8 +2,7 @@
 # append, insert child, remove, edit text
 # 
 
-from PyQt5.QtCore import (QItemSelectionModel, Qt, QRect, pyqtSignal)
-from PyQt5.QtGui import QPainter, QPalette
+from PyQt5.QtCore import (QItemSelectionModel, Qt, pyqtSignal)
 from PyQt5.QtWidgets import (QTreeView, QMenu, QAction, QMessageBox)
 
 from models.GroupModel import GroupModel
@@ -39,7 +38,6 @@ class GroupTreeView(QTreeView):
 
         # drop
         self.setAcceptDrops(True)
-        self.highlightRect = QRect() # show drop indicator
 
         self.setSelectionMode(QTreeView.SingleSelection)
         self.setSelectionBehavior(QTreeView.SelectRows)
@@ -101,85 +99,24 @@ class GroupTreeView(QTreeView):
             menu.exec_(self.viewport().mapToGlobal(position))
 
     # ---------------------------------------------------
-    # drag and drop events
+    # drag events
     # ---------------------------------------------------
-    def paintEvent(self, e):
-        # default paint event
-        super(GroupTreeView, self).paintEvent(e)
-
-        # draw droping indicator
-        if self.highlightRect.isValid():
-            painter = QPainter(self.viewport()) # painter applying on viewpoint
-            color = self.viewport().palette().color(QPalette.Highlight) # highlight
-            painter.setPen(color)
-            painter.drawRect(self.highlightRect)
-
     def dragEnterEvent(self, e):
-        '''accept drag event only if the mimedata is specified by user -> tagit-item'''
-        if e.mimeData().hasFormat('tagit-item'):
+        '''it is implemented in model, but pay attention that in case
+           dragging item from other widget, we must accept this event first.
+        '''
+        e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        '''accept drag event'''
+        index = self.indexAt(e.pos())
+        if self.sourceModel.canDropMimeData(e.mimeData(), None, -1, -1, index):            
+            key = index.siblingAtColumn(GroupModel.KEY).data()
+            self.itemsDropped.emit(key)
             e.accept()
         else:
             e.ignore()
-
-    def dragMoveEvent(self, e):
-        '''accept drag event only if 
-           - the mimedata is specified by user -> tagit-item
-           - target group is not current item group
-           - target group is TRASH if target is default group
-        '''
-        # concern itemtable view only
-        if not e.mimeData().hasFormat('tagit-item'):
-            e.ignore()
-            return
-
-        # ignore current drag by default
-        self.highlightRect = QRect() # QRect of current tree item
-        e.ignore()
-
-        # tree view item right in current cursor
-        index = self.indexAt(e.pos())
-
-        if index.isValid():
-            # target group should only be TRASH if target is default group or item group is UNREFERENCED
-            # target group should not be the original group which the dragging items belong to
-            itemData = e.mimeData().data('tagit-item')
-            item_group = int(str(itemData, encoding='utf-8'))
-            target_group = index.siblingAtColumn(self.sourceModel.KEY).data()
-
-            if item_group!=target_group:
-                if self.sourceModel.isDefaultGroup(index):
-                    if target_group==self.sourceModel.TRASH:
-                        self.highlightRect = self.visualRect(index)
-                        e.accept()
-                elif item_group!=self.sourceModel.UNREFERENCED:
-                    self.highlightRect = self.visualRect(index)
-                    e.accept()
-
-        # trigger paint event to update view
-        self.viewport().update()
-
-    def dragLeaveEvent(self, e):
-        self.highlightRect = QRect()
-        self.viewport().update()
-        e.accept()        
-
-    def dropEvent(self, e):
-        '''accept drag event only if the mimedata is specified type defined by user'''        
-        if not e.mimeData().hasFormat('tagit-item'):
-            e.ignore()
-            return
-
-        # target group
-        index = self.indexAt(e.pos())
-        key = index.siblingAtColumn(self.sourceModel.KEY).data()
-        self.itemsDropped.emit(key)
-
-        # clear droping indicator
-        self.highlightRect = QRect()
-        self.viewport().update()
-
-        e.accept()
-
+          
 
     # ---------------------------------------------------
     # slots
@@ -196,8 +133,8 @@ class GroupTreeView(QTreeView):
 
         # insert
         if self.sourceModel.insertRow(0, index):
-            child_name = self.sourceModel.index(0, self.sourceModel.NAME, index)
-            child_key = self.sourceModel.index(0, self.sourceModel.KEY, index)
+            child_name = self.sourceModel.index(0, GroupModel.NAME, index)
+            child_key = self.sourceModel.index(0, GroupModel.KEY, index)
             self.sourceModel.setData(child_name, "[Sub Group]")
             self.sourceModel.setData(child_key, self.sourceModel.nextKey())            
             self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)
@@ -216,8 +153,8 @@ class GroupTreeView(QTreeView):
         # could not prepend item to default items
         row = index.row() + 1
         if self.sourceModel.insertRow(row, index.parent()):
-            child_name = self.sourceModel.index(row, self.sourceModel.NAME, index.parent())
-            child_key = self.sourceModel.index(row, self.sourceModel.KEY, index.parent())            
+            child_name = self.sourceModel.index(row, GroupModel.NAME, index.parent())
+            child_key = self.sourceModel.index(row, GroupModel.KEY, index.parent())            
             self.sourceModel.setData(child_name, "[New Group]")
             self.sourceModel.setData(child_key, self.sourceModel.nextKey())            
             self.selectionModel().setCurrentIndex(child_name, QItemSelectionModel.ClearAndSelect)

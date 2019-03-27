@@ -3,7 +3,7 @@
 
 import os
 
-from PyQt5.QtCore import (QSortFilterProxyModel, QModelIndex, Qt, QRect, QEvent, QPointF, QMimeData)
+from PyQt5.QtCore import (QSortFilterProxyModel, QModelIndex, Qt, QPointF, QMimeData)
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QStyledItemDelegate, QStyle
 
