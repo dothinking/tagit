@@ -62,9 +62,10 @@ class ItemModel(TableModel):
         # name, path map for searching cretia
         name_source_maps = [(name, source) for (name,_,_,source,*_) in self.dataList]
 
-        # find duplicated (count>1) from group not in DUPLICATED already
+        # find duplicated (count>1) from group not in (DUPLICATED or TRASH) already
         duplicated = [data for (name_source, data) in zip(name_source_maps, self.dataList) 
-            if data[ItemModel.GROUP] != GroupModel.DUPLICATED and name_source_maps.count(name_source)>1]
+            if data[ItemModel.GROUP] not in (GroupModel.DUPLICATED, GroupModel.TRASH)
+             and name_source_maps.count(name_source)>1]
 
         # move found items to DUPLICATED group    
         for item in duplicated:
