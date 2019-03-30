@@ -139,6 +139,8 @@ class MultiItemsDialog(QDialog):
             return
 
         # set root path
+        if not root.endswith('/'):
+            root += '/'
         self.rootPathEdit.setText(root)
         paths = [os.path.join(root, filename) for filename in os.listdir(root) if not filename.startswith('.')]
 
