@@ -66,7 +66,7 @@ class MainMenu(object):
         self.mainWindow.tabViews().currentChanged.connect(self.refreshItems) # tabwidget
         QApplication.instance().focusChanged.connect(self.refreshMenus) # all widgets
 
-        # preference item signals
+        # reference item signals
         self.itemsView.selectionModel().selectionChanged.connect(self.slot_selected_item_changed)
 
         # search items
@@ -338,14 +338,23 @@ class MainMenu(object):
 
         # show detailed information of current item in dock view
         if index:
-            name_index = index.siblingAtColumn(self.itemsView.sourceModel.NAME)
-            note_index = index.siblingAtColumn(self.itemsView.sourceModel.NOTES)
-            name = name_index.data()
-            note = note_index.data()
+            name, group, note = [index.siblingAtColumn(col).data() 
+                        for col in (self.itemsView.sourceModel.NAME,
+                            self.itemsView.sourceModel.GROUP,
+                            self.itemsView.sourceModel.NOTES)]
+            # get group name
+            group_index = self.groupsView.model().getIndexByKey(group)
+            group = group_index.data(Qt.EditRole) if group_index.isValid() else ''
+
+            # get source index from proxy model index
+            # the edit process should apply on source model since proxy model index keeps changing
+            # due to reorder when the title is changed
+            index = self.itemsView.model().mapToSource(index)
         else:
-            name = ''
-            note = ''
-        self.mainWindow.propertyView().widget().setup(index, (name, path, note))
+            name, group, note = [''] * 3
+
+            
+        self.mainWindow.propertyView().widget().setup(index, (name, group, path, note))
 
     def slot_search(self):
         regExp = QRegExp(self.searchEdit.text(), Qt.CaseInsensitive, QRegExp.Wildcard)

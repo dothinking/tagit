@@ -21,10 +21,12 @@ class PropertyWidget(QWidget):
         # labels
         nameLabel = QLabel("Title")
         fileLabel = QLabel("Source path")
+        groupLabel = QLabel("Group")
 
         # line edit
         self.nameEdit = QLineEdit()
-        self.pathEdit = QLineEdit()        
+        self.pathEdit = QLineEdit()
+        self.groupEdit = QLineEdit()
         self.noteEdit = QTextEdit()
 
         # buttons
@@ -60,13 +62,16 @@ class PropertyWidget(QWidget):
         mainLayout.addWidget(self.nameEdit, 0, 1, 1, 2)
         mainLayout.addWidget(fileLabel, 1, 0) # path
         mainLayout.addWidget(self.pathEdit, 1, 1)
-        mainLayout.addWidget(browseButton, 1, 2)        
-        mainLayout.addWidget(self.tabWidget, 2, 0, 1, 3)
+        mainLayout.addWidget(browseButton, 1, 2)
+        mainLayout.addWidget(groupLabel, 2, 0) # group
+        mainLayout.addWidget(self.groupEdit, 2, 1, 1, 2)
+        mainLayout.addWidget(self.tabWidget, 3, 0, 1, 3)
         self.setLayout(mainLayout)
 
         # initial status
         self.tabWidget.setTabEnabled(0, False)
         self.pathEdit.setEnabled(False)
+        self.groupEdit.setEnabled(False)
 
         # signals
         self.nameEdit.textChanged.connect(self.slot_saveItem)
@@ -81,18 +86,22 @@ class PropertyWidget(QWidget):
         textEdit.blockSignals(False)
 
     def setup(self, index, data):
-        '''set data'''
+        '''set data
+           :param index: index of source model, so the following process should 
+                    also apply on source model, rather than proxy model by default
+        '''
         self.currentRow = index.row() if index else None
-        name, path, comments = data
+        name, group, path, comments = data
         self.setTextSafely(self.nameEdit, name)
         self.setTextSafely(self.pathEdit, path)
+        self.setTextSafely(self.groupEdit, group)
         self.setTextSafely(self.noteEdit, comments)
         self.updateTree(path) # set dir tree status
 
     def slot_saveItem(self):
         '''save when changed'''        
         editor = self.sender()
-        model = self.itemView.model()
+        model = self.itemView.model().sourceModel()
 
         if editor==self.nameEdit:
             name = self.nameEdit.text()
