@@ -326,34 +326,26 @@ class MainMenu(object):
         for index in self.itemsView.selectedIndexes():
             break
         else:
-            index = None
+            return
 
         # show path of current reference item in status bar
-        if index:
-            path_index = index.siblingAtColumn(self.itemsView.sourceModel.PATH)
-            path = path_index.data()
-        else:
-            path = ''
+        path_index = index.siblingAtColumn(self.itemsView.sourceModel.PATH)
+        path = path_index.data()
         self.mainWindow.statusBar().showMessage(path)
 
         # show detailed information of current item in dock view
-        if index:
-            name, group, note = [index.siblingAtColumn(col).data() 
-                        for col in (self.itemsView.sourceModel.NAME,
-                            self.itemsView.sourceModel.GROUP,
-                            self.itemsView.sourceModel.NOTES)]
-            # get group name
-            group_index = self.groupsView.model().getIndexByKey(group)
-            group = group_index.data(Qt.EditRole) if group_index.isValid() else ''
+        name, group, note = [index.siblingAtColumn(col).data() 
+                    for col in (self.itemsView.sourceModel.NAME,
+                        self.itemsView.sourceModel.GROUP,
+                        self.itemsView.sourceModel.NOTES)]
+        # get group name
+        group_index = self.groupsView.model().getIndexByKey(group)
+        group = group_index.data(Qt.EditRole) if group_index.isValid() else ''
 
-            # get source index from proxy model index
-            # the edit process should apply on source model since proxy model index keeps changing
-            # due to reorder when the title is changed
-            index = self.itemsView.model().mapToSource(index)
-        else:
-            name, group, note = [''] * 3
-
-            
+        # get source index from proxy model index
+        # the edit process should apply on source model since proxy model index keeps changing
+        # due to reorder when the title is changed
+        index = self.itemsView.model().mapToSource(index)
         self.mainWindow.propertyView().widget().setup(index, (name, group, path, note))
 
     def slot_search(self):

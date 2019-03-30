@@ -101,20 +101,24 @@ class PropertyWidget(QWidget):
     def slot_saveItem(self):
         '''save when changed'''        
         editor = self.sender()
-        model = self.itemView.model().sourceModel()
 
         if editor==self.nameEdit:
-            name = self.nameEdit.text()
-            index = model.index(self.currentRow, ItemModel.NAME)
-            model.setData(index, name)
+            value = self.nameEdit.text()
+            col = ItemModel.NAME
         elif editor==self.pathEdit:
-            path = self.pathEdit.text()
-            index = model.index(self.currentRow, ItemModel.PATH)
-            model.setData(index, path)
+            value = self.pathEdit.text()
+            col = ItemModel.PATH
         elif editor==self.noteEdit:
-            note = self.noteEdit.toPlainText()
-            index = model.index(self.currentRow, ItemModel.NOTES)
-            model.setData(index, note)
+            value = self.noteEdit.toPlainText()
+            col = ItemModel.NOTES
+        else:
+            return
+
+        # update values
+        model = self.itemView.model().sourceModel()
+        index = model.index(self.currentRow, col)
+        if index.isValid():
+            model.setData(index, value)
 
     def slot_openSource(self, index):
         '''open source file/folder from navigation tree'''
