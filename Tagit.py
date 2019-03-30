@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
         selected_group = settings.get('selected_group', GroupModel.ALLGROUPS)
         selected_tag = settings.get('selected_tag', TagModel.NOTAG)
         selected_style = settings.get('selected_style', None)
+        dock_area = settings.get('dock_area', Qt.BottomDockWidgetArea)
 
         # init groups tree view 
         self.groupsTreeView.setup(groups, selected_group)
@@ -135,6 +136,9 @@ class MainWindow(QMainWindow):
         self.itemsTableView.setColumnHidden(ItemModel.TAGS, True)
         self.itemsTableView.setColumnHidden(ItemModel.PATH, True)
         self.itemsTableView.setColumnHidden(ItemModel.NOTES, True)
+
+        # add dock widget
+        self.addDockWidget(dock_area, self.dockProperty)
 
         # set style sheet
         self.main_menu.setStyleSheet(selected_style)
@@ -180,6 +184,7 @@ class MainWindow(QMainWindow):
                 'selected_group': selected_group,
                 'selected_tag': selected_tag,
                 'selected_style': self.main_menu.getCurrentSheetStyle(),
+                'dock_area': self.dockWidgetArea(self.dockProperty)
             },
         }
 
@@ -225,11 +230,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(splitter)
 
         # dock widgets
+        # it has not been added to main window util called by addDockWidget() explicitly
         propWidget = PropertyWidget(self.itemsTableView)
         self.dockProperty = QDockWidget(self.tr("Properties"),self)
         self.dockProperty.setWidget(propWidget)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.dockProperty)
-
 
     def createMainMenu(self):
         '''main menu'''
