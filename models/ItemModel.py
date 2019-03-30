@@ -56,16 +56,30 @@ class ItemModel(TableModel):
         self.layoutChanged.emit() # update table view
 
     def checkDuplicated(self):
-        '''move duplicated items to group DUPLICATED'''
+        '''move duplicated items to group DUPLICATED.
+           - items in TRASH group needn't to be considered
+           - items in DUPLICATED group already should also be checked,
+                since the duplicated one may be reomved to TRASH manually
+        '''
         self.layoutAboutToBeChanged.emit()
 
-        # name, path map for searching cretia
-        name_source_maps = [(name, source) for (name,_,_,source,*_) in self.dataList]
+        # check items in DUPLICATED group -> move all these items to UNGROUPED
+        # then the really duplicated items will be found and move to DUPLICATED group again,
+        # while the certain item no more be duplicated has already been moved to UNGROUPED in ths step
+        for item in self.dataList:
+            if item[ItemModel.GROUP] == GroupModel.DUPLICATED:
+                item[ItemModel.GROUP] = GroupModel.UNGROUPED        
 
-        # find duplicated (count>1) from group not in (DUPLICATED or TRASH) already
-        duplicated = [data for (name_source, data) in zip(name_source_maps, self.dataList) 
-            if data[ItemModel.GROUP] not in (GroupModel.DUPLICATED, GroupModel.TRASH)
-             and name_source_maps.count(name_source)>1]
+        # items not in TRASH
+        common_items = [item for item in self.dataList 
+                            if item[ItemModel.GROUP] != GroupModel.TRASH]
+
+        # name, path map for searching cretia
+        name_source_maps = [(name, source) for (name,_,_,source,*_) in common_items]
+
+        # find duplicated (count>1) 
+        duplicated = [data for (name_source, data) in zip(name_source_maps, common_items)             
+            if name_source_maps.count(name_source)>1]
 
         # move found items to DUPLICATED group    
         for item in duplicated:
