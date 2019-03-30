@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (QWidget, QFileDialog, QMessageBox,
 from PyQt5.QtGui import QDesktopServices
 
 from models.ItemModel import ItemModel
+from models.GroupModel import GroupModel
 
 class PropertyWidget(QWidget):
     def __init__(self, itemView, parent=None):
@@ -30,16 +31,16 @@ class PropertyWidget(QWidget):
         self.noteEdit = QTextEdit()
 
         # buttons
-        browseButton = QToolButton(self)
-        browseButton.setToolButtonStyle(Qt.ToolButtonTextOnly)
-        browseButton.setArrowType(Qt.DownArrow)
-        browseButton.setPopupMode(QToolButton.MenuButtonPopup)
-        browseButton.setText('Browse...')
-        browseButton.setAutoRaise(True)
+        self.browseButton = QToolButton(self)
+        self.browseButton.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.browseButton.setArrowType(Qt.DownArrow)
+        self.browseButton.setPopupMode(QToolButton.MenuButtonPopup)
+        self.browseButton.setText('Browse...')
+        self.browseButton.setAutoRaise(True)
         menu = QMenu(self)
         menu.addAction('Browse Path', lambda: self.slot_browse(0))
         menu.addAction('Browse file', lambda: self.slot_browse(1))
-        browseButton.setMenu(menu)
+        self.browseButton.setMenu(menu)
 
         # dir tree
         self.tree = QTreeView()
@@ -62,7 +63,7 @@ class PropertyWidget(QWidget):
         mainLayout.addWidget(self.nameEdit, 0, 1, 1, 2)
         mainLayout.addWidget(fileLabel, 1, 0) # path
         mainLayout.addWidget(self.pathEdit, 1, 1)
-        mainLayout.addWidget(browseButton, 1, 2)
+        mainLayout.addWidget(self.browseButton, 1, 2)
         mainLayout.addWidget(groupLabel, 2, 0) # group
         mainLayout.addWidget(self.groupEdit, 2, 1, 1, 2)
         mainLayout.addWidget(self.tabWidget, 3, 0, 1, 3)
@@ -85,11 +86,18 @@ class PropertyWidget(QWidget):
         textEdit.setText(value)
         textEdit.blockSignals(False)
 
+    def setEditorsEnbaled(self, enabled=True):
+        self.nameEdit.setEnabled(enabled)
+        self.noteEdit.setEnabled(enabled)
+        self.browseButton.setEnabled(enabled)
+
     def setup(self, index, data):
         '''set data
            :param index: index of source model, so the following process should 
                     also apply on source model, rather than proxy model by default
         '''
+        self.setEditorsEnbaled(True)
+
         self.currentRow = index.row() if index else None
         name, group, path, comments = data
         self.setTextSafely(self.nameEdit, name)
@@ -120,14 +128,21 @@ class PropertyWidget(QWidget):
         if index.isValid():
             model.setData(index, value)
 
+        # update unreferenced status if path is updated:
+        # move item to UNGROUPED if current group is UNREFERENCED 
+        if editor==self.pathEdit:
+            group_index = model.index(self.currentRow, ItemModel.GROUP)
+            if group_index.data() == GroupModel.UNREFERENCED:
+                model.setData(group_index, GroupModel.UNGROUPED)
+
     def slot_openSource(self, index):
         '''open source file/folder from navigation tree'''
         path = self.tree.model().filePath(index)
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
 
-    def slot_browse(self, type):
-        if type==0:
+    def slot_browse(self, path_type):
+        if path_type==0:
             path = QFileDialog.getExistingDirectory(self, "Select directory...")
         else:
             path, _ = QFileDialog.getOpenFileName(self, "Select file...")
