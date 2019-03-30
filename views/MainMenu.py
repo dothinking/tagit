@@ -323,9 +323,13 @@ class MainMenu(object):
         self.refreshMenus()
 
         # current index
+        # if no items are selected,
+        # keep orginal item showing but read only in dock
         for index in self.itemsView.selectedIndexes():
             break
         else:
+            self.mainWindow.statusBar().showMessage('')
+            self.mainWindow.propertyView().widget().setEditorsEnbaled(False)
             return
 
         # show path of current reference item in status bar
