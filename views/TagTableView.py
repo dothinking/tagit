@@ -3,7 +3,7 @@
 # 
 import random
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
+from PyQt5.QtCore import QItemSelectionModel, QModelIndex, Qt, pyqtSignal
 from PyQt5.QtWidgets import (QHeaderView, QTableView, QMenu, QAction, QMessageBox)
 
 from models.TagModel import TagModel, TagDelegate
@@ -41,6 +41,7 @@ class TagTableView(QTableView):
         self.verticalHeader().hide()
 
         # drop
+        self.setDragEnabled(True)
         self.setAcceptDrops(True)
 
         self.setSelectionMode(QTableView.SingleSelection)
@@ -84,14 +85,19 @@ class TagTableView(QTableView):
         '''it is implemented in model, but pay attention that in case
            dragging item from other widget, we must accept this event first.
         '''
-        e.acceptProposedAction()
+        e.accept()
 
     def dropEvent(self, e):
         '''accept drag event'''
         index = self.indexAt(e.pos())
-        if self.sourceModel.canDropMimeData(e.mimeData(), None, -1, -1, index):            
-            key = index.siblingAtColumn(TagModel.KEY).data()
-            self.itemsDropped.emit(key)
+        if self.sourceModel.canDropMimeData(e.mimeData(), None, -1, -1, index):
+            if e.mimeData().hasFormat('tagit-item'):
+                key = index.siblingAtColumn(TagModel.KEY).data()
+                self.itemsDropped.emit(key)
+            elif e.mimeData().hasFormat('tagit-tag'):
+                itemData = e.mimeData().data('tagit-tag')
+                drag_row = int(str(itemData, encoding='utf-8'))
+                self.sourceModel.moveRows(QModelIndex(), drag_row, 1, QModelIndex(), index.row())
             e.accept()
         else:
             e.ignore()

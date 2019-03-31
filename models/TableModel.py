@@ -105,8 +105,10 @@ class TableModel(QAbstractTableModel):
     def insertRows(self, position, rows=1, parent=QModelIndex()):
         '''insert rows at given position'''
         # check range
-        if position < 0 or position>len(self.dataList): 
-            return False
+        if position < 0:
+            position = 0
+        if position>len(self.dataList):
+            position = len(self.dataList)
 
         self.beginInsertRows(parent, position, position+rows-1)
         for row in range(rows):
@@ -121,13 +123,47 @@ class TableModel(QAbstractTableModel):
  
     def removeRows(self, position, rows=1, parent=QModelIndex()):
         '''delete rows at position'''        
-        if position < 0 or position+rows>len(self.dataList):
-            return False
+        if position < 0:
+            position = 0
+        if position+rows>len(self.dataList):
+            rows = len(self.dataList) - position
 
         self.beginRemoveRows(parent, position, position+rows-1)
         for row in range(rows):
             self.dataList.pop(position)
         self.endRemoveRows()
+
+        # flag for saving model
+        self._saveRequired = True
+
+        return True
+
+    def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
+        '''moves count rows starting with the given sourceRow under parent sourceParent 
+           to row destinationChild under parent destinationParent.
+        '''
+        if sourceRow < 0:
+            sourceRow = 0
+        if sourceRow+count>len(self.dataList):
+            count = len(self.dataList)-sourceRow
+        if sourceRow<=destinationChild<=sourceRow+count:
+            return True
+
+        # rows to be moved
+        rows = self.dataList[sourceRow:sourceRow+count]
+        dest = self.dataList[destinationChild]
+
+        # move rows in the same table
+        self.beginMoveRows(sourceParent, sourceRow, sourceRow+count-1, sourceParent, destinationChild)
+        # remove rows in original position
+        for row in range(count):
+            self.dataList.pop(sourceRow)
+
+        # insert to destination position
+        dest_row = self.dataList.index(dest)
+        for row in rows[::-1]:
+            self.dataList.insert(dest_row, row)
+        self.endMoveRows()
 
         # flag for saving model
         self._saveRequired = True

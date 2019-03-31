@@ -309,7 +309,7 @@ class GroupModel(TreeModel):
         
         target_group = parent.siblingAtColumn(GroupModel.KEY).data()
         itemData = data.data('tagit-item')
-        item_group = int(str(itemData, encoding='utf-8'))        
+        item_group = int(str(itemData, encoding='utf-8'))
 
         # target group should not be the original group which the dragging items belong to
         if item_group==target_group:

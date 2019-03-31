@@ -1,7 +1,7 @@
 # model, delegate for Tags table view
 # 
 
-from PyQt5.QtCore import QModelIndex, Qt, QSize
+from PyQt5.QtCore import QModelIndex, Qt, QSize, QMimeData
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QStyledItemDelegate, QStyle, QColorDialog
 
@@ -92,10 +92,11 @@ class TagModel(TableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         # default tag is not editable
+        flag = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
         if self.isDefaultTag(index):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled        
+            return flag
 
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
+        return flag | Qt.ItemIsDragEnabled | Qt.ItemIsEditable
 
     def data(self, index, role=Qt.DisplayRole):
         '''Table view could get data from this model'''
@@ -121,19 +122,29 @@ class TagModel(TableModel):
         else:
             return None
 
-    # implement drop methods
+    # drag / drop methods
+    def mimeTypes(self):
+        return ['tagit-tag']
+
+    def mimeData(self, indexes):
+        mimedata = QMimeData()        
+        mimedata.setData('tagit-tag', str(indexes[0].row()).encode()) # store current row
+        return mimedata
+
     def canDropMimeData(self, data, action, row, column, parent):
-        # accept item table only
-        if not data.hasFormat('tagit-item'):
-            return False
+        if data.hasFormat('tagit-item'):
+            return True
 
-        # can drop exactly on the group
-        # row=-1, column=-1 => drop as child of parent => drop exactly on parent
-        # row>=0, column>=0, drop at index(row, column, parent)
-        if not parent.isValid() or row != -1:
-            return False
+        # should not drop to self or UNTAGGED
+        if data.hasFormat('tagit-tag'):
+            if parent.row() == TagModel.NOTAG:
+                return False
+            else:
+                itemData = data.data('tagit-tag')
+                drag_row = int(str(itemData, encoding='utf-8'))
+                return drag_row != parent.row()
 
-        return True
+        return False
 
 class TagDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
