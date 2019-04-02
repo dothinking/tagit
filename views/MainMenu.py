@@ -343,14 +343,14 @@ class MainMenu(object):
                         self.itemsView.sourceModel.GROUP,
                         self.itemsView.sourceModel.NOTES)]
         # get group name
-        group_index = self.groupsView.model().getIndexByKey(group)
-        group = group_index.data(Qt.EditRole) if group_index.isValid() else ''
+        groups = self.groupsView.model().getParentsByKey(group)
+        groups = ' | '.join(groups[::-1]) if groups else ''
 
         # get source index from proxy model index
         # the edit process should apply on source model since proxy model index keeps changing
         # due to reorder when the title is changed
         index = self.itemsView.model().mapToSource(index)
-        self.mainWindow.propertyView().widget().setup(index, (name, group, path, note))
+        self.mainWindow.propertyView().widget().setup(index, (name, groups, path, note))
 
     def slot_search(self):
         regExp = QRegExp(self.searchEdit.text(), Qt.CaseInsensitive, QRegExp.Wildcard)

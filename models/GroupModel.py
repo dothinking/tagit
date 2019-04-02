@@ -182,6 +182,19 @@ class GroupModel(TreeModel):
 
         return QModelIndex()
 
+    def getParentsByKey(self, key):
+        '''get all parents'''
+        index = self.getIndexByKey(key)
+        res = []
+        while True:
+            if not index.isValid():
+                break
+            else:
+                res.append(index.data(Qt.EditRole))
+                index = self.parent(index)
+        return res
+
+
     def serialize(self, save=True):
         '''store raw data'''
         if save:
